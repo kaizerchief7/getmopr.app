@@ -357,12 +357,15 @@ function viewDetail(c) {
 
   var q = ortSuche(c), L = [];
   if (!past) {
-    L.push([c.ticket_link ? "Tickets (Link)" : "Tickets Eventim", c.ticket_link || "https://www.eventim.de/search/?searchterm=" + enc(c.band)]);
+    var fd = fmt(c.datum);
+    if (c.ticket_link) L.push(["Tickets (Link)", c.ticket_link]);
+    L.push(["Tickets suchen", "https://www.google.com/search?q=" + enc([c.band, c.ort, pad(fd.day) + "." + c.datum.slice(5, 7) + "." + fd.year, "Tickets"].filter(Boolean).join(" "))]);
+    L.push(["Eventim", "https://www.eventim.de/search/?searchterm=" + enc(c.band)]);
     L.push(["Ticketmaster", "https://www.ticketmaster.de/search?q=" + enc(c.band)]);
   }
   L.push(["Anfahrt", "https://www.google.com/maps/search/?api=1&query=" + enc(q)]);
   L.push(["Setlists", "https://www.setlist.fm/search?query=" + enc(c.band)]);
-  L.push(["Reinhören", "https://open.spotify.com/search/" + enc(c.band)]);
+  L.push(["Reinhören (" + DIENSTE[dienst()][0].replace(" Music", "") + ")", DIENSTE[dienst()][1](c.band)]);
   if (!past) L.push(["In Kalender", FN + "?ics=" + c.id + "&k=" + KEY]);
   h += '<section class="stack" style="gap:8px"><span class="over">Links</span><div class="links">';
   L.forEach(function (l) { h += '<a class="lnk" href="' + esc(l[1]) + '" target="_blank" rel="noopener noreferrer">' + esc(l[0]) + "</a>"; });
@@ -371,6 +374,41 @@ function viewDetail(c) {
   h += "</section></div>";
   return h;
 }
+
+function eigeneBands() {
+  var b = [];
+  DATA.konzerte.forEach(function (c) { if (b.indexOf(c.band) < 0) b.push(c.band); });
+  return b.sort(function (x, y) { return x.localeCompare(y, "de"); });
+}
+var bandTimer = null, bandAbfrage = 0;
+function bandVorschlaege(text) {
+  var dl = document.getElementById("bands"); if (!dl) return;
+  var q = text.trim().toLowerCase();
+  var eigene = eigeneBands().filter(function (b) { return !q || b.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+  var setze = function (extra) {
+    var alle = eigene.slice();
+    extra.forEach(function (n) { if (alle.indexOf(n) < 0) alle.push(n); });
+    dl.innerHTML = alle.map(function (b) { return '<option value="' + esc(b) + '">'; }).join("");
+  };
+  setze([]);
+  clearTimeout(bandTimer);
+  if (q.length < 3) return;
+  var nr = ++bandAbfrage;
+  bandTimer = setTimeout(function () {
+    fetch("https://itunes.apple.com/search?entity=musicArtist&country=DE&limit=8&term=" + enc(text.trim()))
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (nr === bandAbfrage) setze((j.results || []).map(function (x) { return x.artistName; })); })
+      .catch(function () {});
+  }, 350);
+}
+document.addEventListener("input", function (e) { if (e.target && e.target.name === "band") bandVorschlaege(e.target.value); });
+
+var DIENSTE = {
+  spotify: ["Spotify", function (b) { return "https://open.spotify.com/search/" + enc(b); }],
+  apple: ["Apple Music", function (b) { return "https://music.apple.com/de/search?term=" + enc(b); }],
+  youtube: ["YouTube Music", function (b) { return "https://music.youtube.com/search?q=" + enc(b); }]
+};
+function dienst() { var d = load("dienst"); return DIENSTE[d] ? d : "spotify"; }
 
 function viewMeins() {
   var ab = abrechnungDaten(), t = heute(), jahr = new Date().getFullYear();
@@ -419,6 +457,11 @@ function viewMeins() {
     c.leute.forEach(function (p) { if (p.kuerzel !== ME && (p.status === "fix" || p.status === "geplant")) mit[p.kuerzel] = (mit[p.kuerzel] || 0) + 1; });
   });
   var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a] || a.localeCompare(b); }).slice(0, 3).map(function (k) { return k + " (" + o[k] + ")"; }).join(", "); };
+  h += '<section class="stack" style="gap:10px"><span class="over">Mein Musikdienst zum Reinhören</span><div class="segs">';
+  Object.keys(DIENSTE).forEach(function (k) {
+    h += '<button type="button" class="seg' + (dienst() === k ? " on" : "") + '" data-act="dienst" data-v="' + k + '" aria-pressed="' + (dienst() === k) + '">' + DIENSTE[k][0] + "</button>";
+  });
+  h += '</div><span class="hint">Gilt nur auf diesem Handy.</span></section>';
   h += '<section class="stack" style="gap:10px"><span class="over">Statistik</span><div class="stats">' +
     '<div class="stat"><b>' + diesJahr + "</b><span>Konzerte " + jahr + "</span></div>" +
     '<div class="stat"><b>' + waren.length + "</b><span>Konzerte insgesamt</span></div>" +
@@ -459,7 +502,8 @@ function viewForm(c) {
   orte.sort(function (a, b) { return a.localeCompare(b, "de"); });
   var h = '<div class="nav"><button class="back" type="button" data-act="' + (neu ? "liste" : "open") + '" data-id="' + (c ? c.id : "") + '">‹ Abbrechen</button>' +
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
-    '<label class="fld"><span class="lbl">Band *</span><input name="band" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
+    '<label class="fld"><span class="lbl">Band *</span><input name="band" list="bands" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
+    '<datalist id="bands">' + eigeneBands().slice(0, 40).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("") + "</datalist>" +
     '<div style="display:flex;gap:10px"><label class="fld" style="flex:3 1 0"><span class="lbl">Datum *</span><input name="datum" type="date" required value="' + esc(v.datum) + '"></label>' +
     '<label class="fld" style="flex:2 1 0"><span class="lbl">Beginn</span><input name="beginn" type="time" value="' + esc(v.beginn || "") + '"></label></div>' +
     '<label class="fld"><span class="lbl">Ort</span><input name="ort" list="orte" maxlength="80" autocomplete="off" placeholder="Tippen – bekannte Orte erscheinen" value="' + esc(v.ort || "") + '"></label>' +
@@ -525,6 +569,7 @@ var A = {
   },
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
+  dienst: function (d) { store("dienst", d.v); render(); },
   alle: function () { view.alle = !view.alle; render(); },
   kauf: function () { view.kauf = null; view.screen = "kauf"; render(); window.scrollTo(0, 0); },
   kaufwer: function (d) { var s = view.kauf.fuer; if (s[d.k]) delete s[d.k]; else s[d.k] = true; render(); },
