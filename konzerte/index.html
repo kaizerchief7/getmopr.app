@@ -17,6 +17,7 @@
 @font-face{font-family:Archivo;font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:Archivo;font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
 @font-face{font-family:Archivo;font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:Shrikhand;font-weight:400;font-display:swap;src:url(fonts/shrikhand-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:Oswald;font-weight:600;font-display:swap;src:url(fonts/oswald-latin-600-normal.woff2) format("woff2")}
 :root{--bg:#F4EBD6;--surface:#FFFAF0;--raised:#EADFC6;--line:#D3C6A8;--ink:#2B1A12;--muted:#6A5848;--accent:#E8572A;--accent-text:#A93A12;--senf:#E9B23F;--petrol:#1F4A4D;--error:#B3261E}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -29,6 +30,12 @@ header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:1
 h1{margin:0;font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;font-size:32px;line-height:38px;letter-spacing:.01em}
 h2{margin:0;font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;font-size:30px;line-height:34px}
 .sub{font-size:13px;color:var(--muted)}
+h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line-height:40px;letter-spacing:0}
+.sub.brand{font-size:15px;font-weight:600;color:var(--muted);margin-top:-2px}
+.mopr{display:flex;align-items:center;justify-content:center;gap:8px;margin:34px 0 0;color:var(--muted);font-size:13px;text-decoration:none}
+.mopr b{font-family:Oswald,"Arial Narrow",sans-serif;font-size:16px;letter-spacing:.06em;color:var(--ink)}
+.rec{display:inline-block;width:22px;height:22px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--bg) 0 6%,var(--accent) 7% 22%,var(--senf) 23% 33%,#111 34% 100%)}
+.pinin{width:100%;min-height:56px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:28px;letter-spacing:.5em;text-align:center}
 .over{font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lbl{font-size:13px;font-weight:600;color:var(--muted)}
 .stack{display:flex;flex-direction:column;gap:12px}
@@ -116,7 +123,7 @@ var MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","D
 var ORD = { fix: 0, geplant: 1, eventuell: 2, nein: 3 };
 var STL = { fix: "Fix", geplant: "Geplant", eventuell: "Vielleicht", nein: "Kann nicht" };
 
-var KEY = null, ME = null, DATA = null;
+var KEY = null, ME = null, PIN = null, DATA = null;
 var view = { screen: "list", id: null, tab: "kommend" };
 var busy = false;
 
@@ -142,13 +149,16 @@ function leseSchluessel() {
 function api(action, payload) {
   var body = Object.assign({ action: action }, payload || {});
   busy = true; document.body.classList.add("busy");
-  return fetch(FN, { method: "POST", headers: { "content-type": "application/json", "x-gruppe": KEY }, body: JSON.stringify(body) })
-    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.fehler || "Fehler " + r.status); e.status = r.status; throw e; } return j; }); })
-    .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [] }; return j; })
+  var h = { "content-type": "application/json", "x-gruppe": KEY };
+  if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
+  return fetch(FN, { method: "POST", headers: h, body: JSON.stringify(body) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.fehler || "Fehler " + r.status); e.status = r.status; e.code = j.code || ""; throw e; } return j; }); })
+    .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [], ich: j.ich || null }; return j; })
     .finally(function () { busy = false; document.body.classList.remove("busy"); });
 }
 function fehler(e) {
   if (e && e.status === 401) { store("k", null); KEY = null; render(); return; }
+  if (e && e.code === "pin") { PIN = null; store("pin", null); view.screen = "wer"; render(); window.scrollTo(0, 0); toast(e.message + "."); return; }
   toast((e && e.message ? e.message : "Hat nicht geklappt") + ".\nBitte nochmal versuchen.");
 }
 
@@ -201,7 +211,8 @@ function render() {
   if (FN.indexOf("PROJEKT") >= 0) { app.innerHTML = '<div class="msg"><h1>Konzerte</h1><p>Die Seite ist noch nicht fertig eingerichtet.</p></div>'; return; }
   if (!KEY) { app.innerHTML = viewOhneLink(); return; }
   if (!DATA) { app.innerHTML = '<div class="msg">Lade …</div>'; return; }
-  if (!ME || view.screen === "wer") { app.innerHTML = viewWer(); return; }
+  if (view.screen === "pin" && view.pinFor) { app.innerHTML = viewPin(); return; }
+  if (!ME || !PIN || view.screen === "wer") { app.innerHTML = viewWer(); return; }
   var c = view.id ? konzert(view.id) : null;
   if (view.screen === "meins") { app.innerHTML = viewMeins(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
@@ -229,11 +240,27 @@ function viewWer() {
   return h;
 }
 
+function viewPin() {
+  var neu = view.pinNeu, k = view.pinFor;
+  var h = '<header class="top"><div><h1>' + esc(k) + '</h1><div class="sub">' + (neu ? "Lege deine PIN fest" : "Deine PIN") + '</div></div></header><div class="stack" style="gap:14px">';
+  if (neu) {
+    h += '<p style="margin:0">Wähle eine <b>4-stellige PIN</b>. Damit bist nur du „' + esc(k) + '“, und deine Abrechnung sieht nur, wer beteiligt ist. Das Handy merkt sich die PIN.</p>' +
+      '<label class="fld"><span class="lbl">PIN</span><input id="pin1" class="pinin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>' +
+      '<label class="fld"><span class="lbl">PIN wiederholen</span><input id="pin2" class="pinin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>';
+  } else {
+    h += '<label class="fld"><span class="lbl">PIN für ' + esc(k) + '</span><input id="pin1" class="pinin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label>' +
+      '<span class="hint">PIN vergessen? Sag Georges Bescheid, er setzt sie zurück.</span>';
+  }
+  h += '<button class="primary" type="button" data-act="pinok">Weiter</button>' +
+    '<button class="back" type="button" data-act="wer" style="align-self:flex-start;padding:0">‹ Anderes Kürzel</button></div>';
+  return h;
+}
+
 function viewListe() {
   var t = heute();
   var up = DATA.konzerte.filter(function (c) { return c.datum >= t; });
   var past = DATA.konzerte.filter(function (c) { return c.datum < t; }).reverse();
-  var h = '<header class="top"><div><h1>Konzerte</h1><div class="sub">in der großen Stadt</div></div>' +
+  var h = '<header class="top"><div><h1 class="brand">Konzerte</h1><div class="sub brand">in der großen Stadt</div></div>' +
     '<button class="secondary" type="button" data-act="meins" aria-label="Mein Bereich: Abrechnung und Statistik (' + esc(ME) + ')">' + esc(ME) + ' ▾</button></header><div class="stack">';
   var ab = abrechnungDaten();
   if (ab.bekomme > 0 || ab.schulde > 0) {
@@ -271,6 +298,7 @@ function viewListe() {
 
   h += '</div><div class="foot"><button type="button" data-act="einladen">Link an Freunde schicken</button>' +
     '<button type="button" data-act="neuladen">Aktualisieren</button><a href="../datenschutz.html" style="padding:10px 0;font-weight:600">Datenschutz</a></div>' +
+    '<a class="mopr" href="https://getmopr.app/" target="_blank" rel="noopener"><span class="rec" aria-hidden="true"></span><span>powered by <b>MOPR</b></span></a>' +
     '<div class="bar"><div><button class="primary" type="button" data-act="neu">+ Konzert eintragen</button></div></div>';
   return h;
 }
@@ -563,12 +591,28 @@ var A = {
     if (!m) { toast("Das ist nicht der richtige Link."); return; }
     KEY = m[1]; store("k", KEY); history.replaceState(null, "", location.pathname + "#k=" + KEY); start();
   },
-  setme: function (d) { ME = d.k; store("me", ME); view.screen = "list"; render(); window.scrollTo(0, 0); },
+  setme: function (d) {
+    var f = DATA.freunde.filter(function (x) { return x.kuerzel === d.k; })[0];
+    view.pinFor = d.k; view.pinNeu = !(f && f.hat_pin); view.neuFreund = false; view.screen = "pin"; render(); window.scrollTo(0, 0);
+    setTimeout(function () { var i = document.getElementById("pin1"); if (i) i.focus(); }, 50);
+  },
+  pinok: function () {
+    var p1 = (document.getElementById("pin1").value || "").trim(), p2 = document.getElementById("pin2") ? document.getElementById("pin2").value.trim() : p1;
+    if (!/^\d{4}$/.test(p1)) { toast("Bitte genau 4 Ziffern."); return; }
+    if (p1 !== p2) { toast("Die beiden PINs sind nicht gleich."); return; }
+    var k = view.pinFor;
+    var aufruf = view.neuFreund ? api("freund_neu", { kuerzel: k, pin: p1 }) : api("pin", { kuerzel: k, pin: p1 });
+    aufruf.then(function () {
+      ME = k; PIN = p1; store("me", k); store("pin", p1); view.screen = "list"; view.pinFor = null; render(); window.scrollTo(0, 0);
+      toast("Hallo " + k + "!");
+    }, function (e) { if (e.code === "pin") toast(e.message + "."); else fehler(e); });
+  },
   wer: function () { view.screen = "wer"; render(); window.scrollTo(0, 0); },
   neufreund: function () {
     var k = (document.getElementById("neuk").value || "").trim().toUpperCase();
     if (!/^[A-ZÄÖÜ]{1,4}$/.test(k)) { toast("Bitte 1–4 Buchstaben, z. B. MK."); return; }
-    api("freund_neu", { kuerzel: k }).then(function () { ME = k; store("me", k); view.screen = "list"; render(); }, fehler);
+    if (DATA.freunde.some(function (f) { return f.kuerzel === k; })) { toast("Das Kürzel gibt es schon – oben antippen."); return; }
+    view.pinFor = k; view.pinNeu = true; view.neuFreund = true; view.screen = "pin"; render(); window.scrollTo(0, 0);
   },
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
@@ -669,11 +713,12 @@ document.addEventListener("click", function (e) {
 });
 
 function start() {
-  KEY = leseSchluessel(); ME = load("me");
+  KEY = leseSchluessel(); ME = load("me"); PIN = load("pin");
   render();
   if (!KEY || FN.indexOf("PROJEKT") >= 0) return;
   api("laden").then(function () {
     if (ME && !DATA.freunde.some(function (f) { return f.kuerzel === ME; })) { ME = null; store("me", null); }
+    if (ME && PIN && DATA.ich !== ME) { PIN = null; store("pin", null); }
     render();
   }, function (e) {
     if (e.status === 401) { fehler(e); return; }
