@@ -35,6 +35,10 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .mopr{display:flex;align-items:center;justify-content:center;gap:8px;margin:34px 0 0;color:var(--muted);font-size:13px;text-decoration:none}
 .mopr b{font-family:Oswald,"Arial Narrow",sans-serif;font-size:16px;letter-spacing:.06em;color:var(--ink)}
 .rec{display:inline-block;width:22px;height:22px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--bg) 0 6%,var(--accent) 7% 22%,var(--senf) 23% 33%,#111 34% 100%)}
+.notiz{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.notiz .chip{flex:none}
+.notiz p{margin:0;flex:1;min-width:0;font-size:15px;line-height:21px;overflow-wrap:anywhere}
+.notiz small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .pinin{width:100%;min-height:56px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:28px;letter-spacing:.5em;text-align:center}
 .over{font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lbl{font-size:13px;font-weight:600;color:var(--muted)}
@@ -310,6 +314,7 @@ function rowHtml(c, t) {
   if (!act.length && c.datum >= t) badges += '<span class="badge b-tipp">Tipp – wer hat Lust?</span>';
   if (c.ausverkauft) badges += '<span class="badge b-sold">Ausverkauft</span>';
   if (fr > 0 && c.datum >= t) badges += '<span class="badge b-frei">' + plural(fr, "Karte", "Karten") + ' frei</span>';
+  if (c.notizen && c.notizen.length) badges += '<span class="badge b-tipp">' + plural(c.notizen.length, "Notiz", "Notizen") + "</span>";
   var chips = act.map(function (p) { return '<span class="chip st-' + p.status + '">' + esc(p.kuerzel) + (p.karten > 1 ? " ×" + p.karten : "") + "</span>"; }).join("");
   return '<button type="button" class="row' + (today ? " today" : "") + '" data-act="open" data-id="' + c.id + '">' +
     '<span class="date" aria-hidden="true"><small>' + f.wd + "</small><b>" + f.day + "</b><small>" + f.mon + (f.year !== new Date().getFullYear() ? " " + String(f.year).slice(2) : "") + "</small></span>" +
@@ -383,6 +388,17 @@ function viewDetail(c) {
   });
   h += "</section>";
 
+  h += '<section class="stack" style="gap:8px"><span class="over">Notizen</span>';
+  (c.notizen || []).forEach(function (n) {
+    var d = new Date(n.am);
+    h += '<div class="notiz"><span class="chip st-fix">' + esc(n.kuerzel) + "</span><p>" + esc(n.text) +
+      "<small>" + d.getDate() + ". " + MON[d.getMonth()] + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + "</small></p>" +
+      (n.kuerzel === ME ? '<button class="amt" type="button" data-act="notizweg" data-id="' + n.id + '" style="color:var(--muted);font-weight:600;flex:none">löschen</button>' : "") + "</div>";
+  });
+  h += '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">' + (past ? "Wie war’s? Oder sonst eine Notiz" : "Treffpunkt, Idee, Hinweis …") + '</span>' +
+    '<input id="notizneu" maxlength="500" autocomplete="off" enterkeyhint="send"></label>' +
+    '<button class="secondary" type="button" data-act="notizneu">Hinzufügen</button></div></section>';
+
   var q = ortSuche(c), L = [];
   if (!past) {
     var fd = fmt(c.datum);
@@ -429,6 +445,9 @@ function bandVorschlaege(text) {
       .catch(function () {});
   }, 350);
 }
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && e.target && e.target.id === "notizneu" && !busy) { e.preventDefault(); A.notizneu(); }
+});
 document.addEventListener("input", function (e) { if (e.target && e.target.name === "band") bandVorschlaege(e.target.value); });
 
 var DIENSTE = {
@@ -617,6 +636,15 @@ var A = {
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
   dienst: function (d) { store("dienst", d.v); render(); },
+  notizneu: function () {
+    var t = (document.getElementById("notizneu").value || "").trim();
+    if (!t) { toast("Erst etwas eintippen."); return; }
+    api("notiz_neu", { konzert_id: view.id, text: t }).then(render, fehler);
+  },
+  notizweg: function (d) {
+    if (!confirm("Notiz löschen?")) return;
+    api("notiz_loeschen", { id: d.id }).then(render, fehler);
+  },
   zurueck: function (d) {
     var c = konzert(d.id);
     if (!confirm("Kauf für " + d.k + " bei „" + c.band + "“ zurücknehmen? Die Karte gilt dann wieder als offen.")) return;
