@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-180.png">
-<title>Konzerte</title>
+<title>Konzerte in der großen Stadt</title>
 <style>
 @font-face{font-family:Archivo;font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:Archivo;font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
@@ -87,6 +87,18 @@ h2{margin:0;font-family:Oswald,"Arial Narrow",sans-serif;font-weight:600;font-si
 .hint{font-size:14px;color:var(--muted)}
 .danger{border:0;background:none;color:var(--error);font-size:15px;font-weight:600;padding:12px 0;text-decoration:underline;cursor:pointer;align-self:flex-start}
 body.busy #app{opacity:.6;pointer-events:none}
+.money{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px}
+.money .what{flex:1;min-width:0}
+.tick{flex:none;min-width:92px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:14px;font-weight:700;cursor:pointer}
+.tick.on{background:#2E7D45;border-color:#2E7D45;color:#fff}
+.amt{border:0;background:none;padding:6px 0;font:inherit;font-weight:700;color:var(--accent-text);text-decoration:underline;cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.stat b{display:block;font-family:Oswald,"Arial Narrow",sans-serif;font-size:28px;line-height:32px}
+.stat span{font-size:13px;color:var(--muted)}
+.pick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pick button{min-height:52px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-family:Oswald,"Arial Narrow",sans-serif;font-size:20px;font-weight:600;cursor:pointer}
+.pick button.on{background:var(--senf);border-color:var(--senf)}
 .msg{padding:48px 0;display:flex;flex-direction:column;gap:14px;font-size:16px}
 </style>
 </head>
@@ -149,12 +161,35 @@ function datumZeile(c, kurz) {
   var f = fmt(c.datum), heuteTxt = c.datum === heute() ? "Heute" : f.wd + " " + f.day + ". " + f.mon + (kurz ? "" : " " + f.year);
   return heuteTxt + (c.beginn ? " · " + c.beginn + (kurz ? "" : " Uhr") : "");
 }
+function preisZahl(t) { var m = String(t || "").match(/^\s*(\d+)(?:[.,](\d{1,2}))?\s*€?\s*$/); return m ? Number(m[1] + "." + (m[2] || "0")) : null; }
+function eur(n) { return Number(n).toLocaleString("de-DE", { style: "currency", currency: "EUR" }); }
+function abrechnungDaten() {
+  var pro = {};
+  DATA.konzerte.forEach(function (c) {
+    c.leute.forEach(function (p) {
+      if (!p.gekauft_von) return;
+      var anderer = null, richtung = null;
+      if (p.gekauft_von === ME && p.kuerzel !== ME) { anderer = p.kuerzel; richtung = "bekomme"; }
+      else if (p.kuerzel === ME) { anderer = p.gekauft_von; richtung = "schulde"; }
+      if (!anderer) return;
+      var x = pro[anderer] || (pro[anderer] = { wer: anderer, bekomme: [], schulde: [], offenB: 0, offenS: 0, erledigt: 0 });
+      x[richtung].push({ c: c, p: p });
+      if (p.bezahlt) x.erledigt++;
+      else if (richtung === "bekomme") x.offenB += p.betrag || 0; else x.offenS += p.betrag || 0;
+    });
+  });
+  var liste = Object.keys(pro).sort().map(function (k) { return pro[k]; });
+  var summeB = 0, summeS = 0;
+  liste.forEach(function (x) { summeB += x.offenB; summeS += x.offenS; });
+  return { liste: liste, bekomme: summeB, schulde: summeS };
+}
 function info(p) {
   if (p.status === "nein") return p.frei > 0 ? "kann nicht · gibt " + plural(p.frei, "Karte", "Karten") + " ab" : "kann nicht";
   var t = { hab: "hat Karte", selbst: "kauft selbst", mit: "bitte mitkaufen" }[p.karte] || "Karte noch offen";
   if (p.karte === "hab" && p.karten > 1) t = "hat " + p.karten + " Karten";
   else if (p.karten > 1) t += " · " + p.karten + " Personen";
-  if (p.von) t += " (von " + p.von + ")";
+  if (p.gekauft_von) t += " · gekauft von " + p.gekauft_von + (p.betrag != null ? " (" + eur(p.betrag) + (p.bezahlt ? ", bezahlt" : ", offen") + ")" : "");
+  else if (p.von) t += " (von " + p.von + ")";
   if (p.frei > 0) t += " · " + p.frei + " frei";
   return t;
 }
@@ -167,6 +202,8 @@ function render() {
   if (!DATA) { app.innerHTML = '<div class="msg">Lade …</div>'; return; }
   if (!ME || view.screen === "wer") { app.innerHTML = viewWer(); return; }
   var c = view.id ? konzert(view.id) : null;
+  if (view.screen === "meins") { app.innerHTML = viewMeins(); return; }
+  if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
   if (view.screen === "detail" && c) app.innerHTML = viewDetail(c);
   else if (view.screen === "form") app.innerHTML = viewForm(c);
   else { view.screen = "list"; app.innerHTML = viewListe(); }
@@ -195,8 +232,14 @@ function viewListe() {
   var t = heute();
   var up = DATA.konzerte.filter(function (c) { return c.datum >= t; });
   var past = DATA.konzerte.filter(function (c) { return c.datum < t; }).reverse();
-  var h = '<header class="top"><div><h1>Konzerte</h1><div class="sub">Unsere Liste · nur für uns</div></div>' +
-    '<button class="secondary" type="button" data-act="wer" aria-label="Kürzel wechseln, angemeldet als ' + esc(ME) + '">' + esc(ME) + ' ▾</button></header><div class="stack">';
+  var h = '<header class="top"><div><h1>Konzerte</h1><div class="sub">in der großen Stadt</div></div>' +
+    '<button class="secondary" type="button" data-act="meins" aria-label="Mein Bereich: Abrechnung und Statistik (' + esc(ME) + ')">' + esc(ME) + ' ▾</button></header><div class="stack">';
+  var ab = abrechnungDaten();
+  if (ab.bekomme > 0 || ab.schulde > 0) {
+    h += '<button type="button" class="row" data-act="meins" style="flex-direction:column;gap:2px"><span class="over">Abrechnung offen</span><span style="font-size:15px">' +
+      (ab.bekomme > 0 ? "Du bekommst <b>" + eur(ab.bekomme) + "</b>" : "") + (ab.bekomme > 0 && ab.schulde > 0 ? " · " : "") +
+      (ab.schulde > 0 ? "Du schuldest <b>" + eur(ab.schulde) + "</b>" : "") + "</span></button>";
+  }
 
   var free = [];
   up.forEach(function (c) { c.leute.forEach(function (p) { if (p.frei > 0) free.push({ c: c, p: p }); }); });
@@ -243,6 +286,7 @@ function rowHtml(c, t) {
     '<span class="date" aria-hidden="true"><small>' + f.wd + "</small><b>" + f.day + "</b><small>" + f.mon + (f.year !== new Date().getFullYear() ? " " + String(f.year).slice(2) : "") + "</small></span>" +
     '<span class="rmain">' + (badges ? '<span class="chips">' + badges + "</span>" : "") +
     '<span class="band">' + esc(c.band) + '</span><span class="meta">' + esc([c.ort, c.beginn, c.preis].filter(Boolean).join(" · ")) + "</span>" +
+    (c.notiz ? '<span class="meta" style="font-style:italic">' + esc(c.notiz) + "</span>" : "") +
     (chips ? '<span class="chips" style="margin-top:2px">' + chips + "</span>" : "") + "</span></button>";
 }
 
@@ -296,6 +340,7 @@ function viewDetail(c) {
       h += '<span style="font-size:15px;font-weight:600;color:var(--accent-text)">' + (m.frei > 0 ? (m.frei === 1 ? "Deine Karte steht" : "Deine " + m.frei + " Karten stehen") + " oben in der Liste als frei." : "Abgesagt.") + "</span>";
       if (m.karte === "hab") h += '<div class="steprow"><span>Freie Karten</span><button class="step" type="button" data-act="frei" data-v="-1" aria-label="Eine freie Karte weniger">−</button><b>' + m.frei + '</b><button class="step" type="button" data-act="frei" data-v="1" aria-label="Eine freie Karte mehr">+</button></div>';
     }
+    h += '<button class="secondary" type="button" data-act="kauf">Ich habe Karten gekauft …</button>';
     if (m) h += '<button class="back" type="button" data-act="austragen" style="align-self:flex-start;padding:0">Mich ganz austragen</button>';
     h += "</section>";
   }
@@ -323,6 +368,86 @@ function viewDetail(c) {
   h += "</div>";
   if (!past) h += '<button class="primary" type="button" data-act="teilen" data-id="' + c.id + '" style="margin-top:6px">An die Gruppe schicken</button>';
   h += "</section></div>";
+  return h;
+}
+
+function viewMeins() {
+  var ab = abrechnungDaten(), t = heute(), jahr = new Date().getFullYear();
+  var h = '<div class="nav"><button class="back" type="button" data-act="liste">‹ Alle Konzerte</button>' +
+    '<button class="back" type="button" data-act="wer">Kürzel wechseln</button></div><div class="stack" style="gap:18px"><h2>Meins (' + esc(ME) + ")</h2>";
+
+  h += '<section class="stack" style="gap:10px"><span class="over">Abrechnung</span>';
+  if (!ab.liste.length) h += '<span class="hint">Noch nichts abzurechnen. Wer Karten für andere kauft, tippt im Konzert auf „Ich habe Karten gekauft …“.</span>';
+  ab.liste.forEach(function (x) {
+    var netto = Math.round((x.offenB - x.offenS) * 100) / 100;
+    var vorschlag = netto > 0 ? x.wer + " überweist dir " + eur(netto) : netto < 0 ? "Du überweist " + x.wer + " " + eur(-netto) : (x.offenB || x.offenS ? "Geht genau auf – gegenseitig abhaken" : "Alles erledigt");
+    h += '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="chip st-fix">' + esc(x.wer) + '</span><b style="text-align:right">' + esc(vorschlag) + "</b></div>";
+    x.bekomme.forEach(function (l) {
+      if (l.p.bezahlt && !view.alle) return;
+      var f = fmt(l.c.datum);
+      h += '<div class="money"><span class="what">' + esc(l.c.band) + ' <span class="meta">· ' + f.day + ". " + f.mon + (l.p.karten > 1 ? " · " + l.p.karten + " Karten" : "") + "</span><br>" +
+        '<button class="amt" type="button" data-act="betrag" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" data-b="' + (l.p.betrag == null ? "" : l.p.betrag) + '">' + (l.p.betrag == null ? "Betrag eintragen" : "bekommst " + eur(l.p.betrag)) + "</button></span>" +
+        '<button class="tick' + (l.p.bezahlt ? " on" : "") + '" type="button" data-act="bezahlt" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" aria-pressed="' + !!l.p.bezahlt + '">' + (l.p.bezahlt ? "✓ bezahlt" : "bezahlt?") + "</button></div>";
+    });
+    x.schulde.forEach(function (l) {
+      if (l.p.bezahlt && !view.alle) return;
+      var f = fmt(l.c.datum);
+      h += '<div class="money"><span class="what">' + esc(l.c.band) + ' <span class="meta">· ' + f.day + ". " + f.mon + "</span><br><b>" +
+        (l.p.betrag == null ? "Betrag noch offen" : "schuldest " + eur(l.p.betrag)) + '</b></span><span class="hint" style="flex:none;max-width:110px;text-align:right">' +
+        (l.p.bezahlt ? "✓ bezahlt" : esc(x.wer) + " hakt ab") + "</span></div>";
+    });
+    if (x.erledigt && !view.alle) h += '<span class="hint">' + plural(x.erledigt, "Posten erledigt", "Posten erledigt") + "</span>";
+    h += "</div>";
+  });
+  if (ab.liste.length) h += '<button class="back" type="button" data-act="alle" style="align-self:flex-start;padding:0">' + (view.alle ? "Erledigte ausblenden" : "Erledigte zeigen") + "</button>";
+  h += "</section>";
+
+  var meine = DATA.konzerte.filter(function (c) { var m = mein(c); return m && (m.status === "fix" || m.status === "geplant"); });
+  var waren = meine.filter(function (c) { return c.datum < t; });
+  var diesJahr = waren.filter(function (c) { return c.datum.slice(0, 4) === String(jahr); }).length;
+  var kommend = meine.length - waren.length;
+  var ausg = 0, ausgUnsicher = false;
+  waren.forEach(function (c) {
+    var m = mein(c);
+    if (m.gekauft_von && m.betrag != null) ausg += m.betrag;
+    else { var pz = preisZahl(c.preis); if (pz != null) ausg += pz * Math.max(1, m.karten); else ausgUnsicher = true; }
+  });
+  var orte = {}, mit = {};
+  waren.forEach(function (c) {
+    if (c.ort) orte[c.ort] = (orte[c.ort] || 0) + 1;
+    c.leute.forEach(function (p) { if (p.kuerzel !== ME && (p.status === "fix" || p.status === "geplant")) mit[p.kuerzel] = (mit[p.kuerzel] || 0) + 1; });
+  });
+  var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a] || a.localeCompare(b); }).slice(0, 3).map(function (k) { return k + " (" + o[k] + ")"; }).join(", "); };
+  h += '<section class="stack" style="gap:10px"><span class="over">Statistik</span><div class="stats">' +
+    '<div class="stat"><b>' + diesJahr + "</b><span>Konzerte " + jahr + "</span></div>" +
+    '<div class="stat"><b>' + waren.length + "</b><span>Konzerte insgesamt</span></div>" +
+    '<div class="stat"><b>' + kommend + "</b><span>stehen noch an</span></div>" +
+    '<div class="stat"><b>' + (ausg ? eur(Math.round(ausg)).replace(",00", "") : "–") + "</b><span>für Karten" + (ausgUnsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
+    (top(orte) ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(top(orte)) + "</span>" : "") +
+    (top(mit) ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(top(mit)) + "</span>" : "") +
+    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. Die Liste beginnt im Oktober 2026.</span></section></div>';
+  return h;
+}
+
+function viewKauf(c) {
+  var vor = {}; vor[ME] = true;
+  c.leute.forEach(function (p) { if (p.karte === "mit" || p.kuerzel === ME) vor[p.kuerzel] = true; });
+  if (!view.kauf || view.kauf.id !== c.id) view.kauf = { id: c.id, fuer: vor };
+  var sel = view.kauf.fuer, im = {};
+  c.leute.forEach(function (p) { im[p.kuerzel] = p; });
+  var h = '<div class="nav"><button class="back" type="button" data-act="open" data-id="' + c.id + '">‹ Abbrechen</button>' +
+    '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">Karten gekauft</span></div>' +
+    '<div class="stack" style="gap:16px"><div><span class="over">' + esc(datumZeile(c, false)) + "</span><h2>" + esc(c.band) + "</h2></div>" +
+    '<span class="lbl">Für wen hast du Karten gekauft? (dich selbst mit antippen)</span><div class="pick">';
+  DATA.freunde.forEach(function (f) {
+    var p = im[f.kuerzel];
+    h += '<button type="button" class="' + (sel[f.kuerzel] ? "on" : "") + '" data-act="kaufwer" data-k="' + esc(f.kuerzel) + '" aria-pressed="' + !!sel[f.kuerzel] + '">' + esc(f.kuerzel) +
+      (p && p.karten > 1 && p.status !== "nein" ? '<small style="display:block;font-size:12px;font-family:Archivo,sans-serif">×' + p.karten + "</small>" : "") + "</button>";
+  });
+  var pz = preisZahl(c.preis);
+  h += '</div><label class="fld"><span class="lbl">Preis pro Karte in €</span><input id="kaufpreis" inputmode="decimal" placeholder="z. B. 34,50" value="' + (pz != null ? pz.toFixed(2).replace(".", ",") : "") + '"></label>' +
+    '<span class="hint">Wer mehrere Karten hat (z. B. ×4), zahlt entsprechend mehr. Danach siehst du unter „Meins“, wer dir was schuldet, und hakst ab, sobald bezahlt ist.</span></div>' +
+    '<div class="bar"><div><button class="primary" type="button" data-act="kaufspeichern">Speichern</button></div></div>';
   return h;
 }
 
@@ -398,6 +523,31 @@ var A = {
     api("freund_neu", { kuerzel: k }).then(function () { ME = k; store("me", k); view.screen = "list"; render(); }, fehler);
   },
   liste: function () { gehe("list"); },
+  meins: function () { gehe("meins"); },
+  alle: function () { view.alle = !view.alle; render(); },
+  kauf: function () { view.kauf = null; view.screen = "kauf"; render(); window.scrollTo(0, 0); },
+  kaufwer: function (d) { var s = view.kauf.fuer; if (s[d.k]) delete s[d.k]; else s[d.k] = true; render(); },
+  kaufspeichern: function () {
+    var fuer = Object.keys(view.kauf.fuer), roh = (document.getElementById("kaufpreis").value || "").trim().replace(",", ".");
+    if (!fuer.length) { toast("Bitte antippen, für wen du gekauft hast."); return; }
+    if (roh && !/^\d+(\.\d{1,2})?$/.test(roh)) { toast("Preis bitte als Zahl, z. B. 34,50."); return; }
+    api("gekauft", { konzert_id: view.kauf.id, kaeufer: ME, fuer: fuer, preis: roh || null }).then(function () {
+      var andere = fuer.filter(function (k) { return k !== ME; });
+      view.screen = "detail"; view.id = view.kauf.id; render(); window.scrollTo(0, 0);
+      toast(andere.length ? "Eingetragen. " + andere.join(", ") + (andere.length > 1 ? " sehen" : " sieht") + " jetzt, was zu zahlen ist.\nAbhaken unter „Meins“." : "Eingetragen.");
+    }, fehler);
+  },
+  bezahlt: function (d) {
+    var c = konzert(d.id), p = c.leute.filter(function (x) { return x.kuerzel === d.k; })[0];
+    api("bezahlt", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME, bezahlt: !p.bezahlt }).then(render, fehler);
+  },
+  betrag: function (d) {
+    var v = prompt("Betrag in € für " + d.k + " (alle Karten zusammen):", d.b ? String(d.b).replace(".", ",") : "");
+    if (v === null) return;
+    v = v.trim().replace(",", ".").replace("€", "").trim();
+    if (v && !/^\d+(\.\d{1,2})?$/.test(v)) { toast("Bitte als Zahl, z. B. 61,80."); return; }
+    api("betrag", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME, betrag: v || null }).then(render, fehler);
+  },
   tab: function (d) { view.tab = d.v; render(); },
   tippweg: function () { store("tipp-weg", "1"); render(); },
   open: function (d) { if (d.id) gehe("detail", d.id); else gehe("list"); },
