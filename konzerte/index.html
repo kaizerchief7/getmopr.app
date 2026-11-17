@@ -220,7 +220,7 @@ function render() {
   var c = view.id ? konzert(view.id) : null;
   if (view.screen === "meins") { app.innerHTML = viewMeins(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
-  if (view.screen === "detail" && c) app.innerHTML = viewDetail(c);
+  if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); }
   else if (view.screen === "form") app.innerHTML = viewForm(c);
   else { view.screen = "list"; app.innerHTML = viewListe(); }
 }
@@ -412,7 +412,7 @@ function viewDetail(c) {
   L.push(["Reinhören (" + DIENSTE[dienst()][0].replace(" Music", "") + ")", DIENSTE[dienst()][1](c.band)]);
   if (!past) L.push(["In Kalender", FN + "?ics=" + c.id + "&k=" + KEY]);
   h += '<section class="stack" style="gap:8px"><span class="over">Links</span><div class="links">';
-  L.forEach(function (l) { h += '<a class="lnk" href="' + esc(l[1]) + '" target="_blank" rel="noopener noreferrer">' + esc(l[0]) + "</a>"; });
+  L.forEach(function (l) { h += '<a class="lnk" href="' + esc(l[1]) + '" target="_blank" rel="noopener noreferrer"' + (l[0].indexOf("Reinhören") === 0 ? ' id="reinhoeren" data-band="' + esc(c.band) + '"' : "") + ">" + esc(l[0]) + "</a>"; });
   h += "</div>";
   if (!past) h += '<button class="primary" type="button" data-act="teilen" data-id="' + c.id + '" style="margin-top:6px">An die Gruppe schicken</button>';
   h += "</section></div>";
@@ -455,6 +455,25 @@ var DIENSTE = {
   apple: ["Apple Music", function (b) { return "https://music.apple.com/de/search?term=" + enc(b); }],
   youtube: ["YouTube Music", function (b) { return "https://music.youtube.com/search?q=" + enc(b); }]
 };
+// Apple Music: Die Suchseite übergibt den Begriff nicht an die Musik-App am iPhone.
+// Deshalb direkt die Künstlerseite suchen (Apple-Katalog, ohne Schlüssel) und verlinken.
+var appleCache = {};
+function appleKuenstler() {
+  var a = document.getElementById("reinhoeren");
+  if (!a || dienst() !== "apple") return;
+  var band = a.getAttribute("data-band"), setze = function (url) { var x = document.getElementById("reinhoeren"); if (url && x && x.getAttribute("data-band") === band) x.href = url; };
+  if (appleCache[band] !== undefined) { setze(appleCache[band]); return; }
+  fetch("https://itunes.apple.com/search?entity=musicArtist&country=DE&limit=5&term=" + enc(band))
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var res = (j.results || []).filter(function (x) { return /^https:\/\/music\.apple\.com\//.test(x.artistLinkUrl || ""); }), low = band.toLowerCase();
+      var best = res.filter(function (x) { return (x.artistName || "").toLowerCase() === low; })[0] || res[0];
+      var url = best && best.artistLinkUrl ? best.artistLinkUrl.replace(/\?.*$/, "") : null;
+      appleCache[band] = url; setze(url);
+    })
+    .catch(function () {});
+}
+
 function dienst() { var d = load("dienst"); return DIENSTE[d] ? d : "spotify"; }
 
 function viewMeins() {
