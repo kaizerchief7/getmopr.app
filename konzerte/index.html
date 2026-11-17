@@ -425,7 +425,8 @@ function viewMeins() {
       if (l.p.bezahlt && !view.alle) return;
       var f = fmt(l.c.datum);
       h += '<div class="money"><span class="what">' + esc(l.c.band) + ' <span class="meta">· ' + f.day + ". " + f.mon + (l.p.karten > 1 ? " · " + l.p.karten + " Karten" : "") + "</span><br>" +
-        '<button class="amt" type="button" data-act="betrag" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" data-b="' + (l.p.betrag == null ? "" : l.p.betrag) + '">' + (l.p.betrag == null ? "Betrag eintragen" : "bekommst " + eur(l.p.betrag)) + "</button></span>" +
+        '<button class="amt" type="button" data-act="betrag" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" data-b="' + (l.p.betrag == null ? "" : l.p.betrag) + '">' + (l.p.betrag == null ? "Betrag eintragen" : "bekommst " + eur(l.p.betrag)) + "</button>" +
+        ' <button class="amt" type="button" data-act="zurueck" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" style="color:var(--muted);font-weight:600">zurücknehmen</button></span>' +
         '<button class="tick' + (l.p.bezahlt ? " on" : "") + '" type="button" data-act="bezahlt" data-id="' + l.c.id + '" data-k="' + esc(l.p.kuerzel) + '" aria-pressed="' + !!l.p.bezahlt + '">' + (l.p.bezahlt ? "✓ bezahlt" : "bezahlt?") + "</button></div>";
     });
     x.schulde.forEach(function (l) {
@@ -475,7 +476,8 @@ function viewMeins() {
 
 function viewKauf(c) {
   var vor = {}; vor[ME] = true;
-  c.leute.forEach(function (p) { if (p.karte === "mit" || p.kuerzel === ME) vor[p.kuerzel] = true; });
+  var schonGekauft = c.leute.some(function (p) { return p.gekauft_von === ME; });
+  c.leute.forEach(function (p) { if (p.gekauft_von === ME || (!schonGekauft && p.karte === "mit")) vor[p.kuerzel] = true; });
   if (!view.kauf || view.kauf.id !== c.id) view.kauf = { id: c.id, fuer: vor };
   var sel = view.kauf.fuer, im = {};
   c.leute.forEach(function (p) { im[p.kuerzel] = p; });
@@ -490,6 +492,7 @@ function viewKauf(c) {
   });
   var pz = preisZahl(c.preis);
   h += '</div><label class="fld"><span class="lbl">Preis pro Karte in €</span><input id="kaufpreis" inputmode="decimal" placeholder="z. B. 34,50" value="' + (pz != null ? pz.toFixed(2).replace(".", ",") : "") + '"></label>' +
+    (schonGekauft ? '<span class="hint"><b>Schon eingetragen.</b> Wen du abwählst, dessen Kauf wird zurückgenommen.</span>' : "") +
     '<span class="hint">Wer mehrere Karten hat (z. B. ×4), zahlt entsprechend mehr. Danach siehst du unter „Meins“, wer dir was schuldet, und hakst ab, sobald bezahlt ist.</span></div>' +
     '<div class="bar"><div><button class="primary" type="button" data-act="kaufspeichern">Speichern</button></div></div>';
   return h;
@@ -570,16 +573,23 @@ var A = {
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
   dienst: function (d) { store("dienst", d.v); render(); },
+  zurueck: function (d) {
+    var c = konzert(d.id);
+    if (!confirm("Kauf für " + d.k + " bei „" + c.band + "“ zurücknehmen? Die Karte gilt dann wieder als offen.")) return;
+    api("kauf_zurueck", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME }).then(function () { render(); toast("Zurückgenommen."); }, fehler);
+  },
   alle: function () { view.alle = !view.alle; render(); },
   kauf: function () { view.kauf = null; view.screen = "kauf"; render(); window.scrollTo(0, 0); },
   kaufwer: function (d) { var s = view.kauf.fuer; if (s[d.k]) delete s[d.k]; else s[d.k] = true; render(); },
   kaufspeichern: function () {
     var fuer = Object.keys(view.kauf.fuer), roh = (document.getElementById("kaufpreis").value || "").trim().replace(",", ".");
-    if (!fuer.length) { toast("Bitte antippen, für wen du gekauft hast."); return; }
+    var schon = konzert(view.kauf.id).leute.some(function (p) { return p.gekauft_von === ME; });
+    if (!fuer.length && !schon) { toast("Bitte antippen, für wen du gekauft hast."); return; }
     if (roh && !/^\d+(\.\d{1,2})?$/.test(roh)) { toast("Preis bitte als Zahl, z. B. 34,50."); return; }
     api("gekauft", { konzert_id: view.kauf.id, kaeufer: ME, fuer: fuer, preis: roh || null }).then(function () {
       var andere = fuer.filter(function (k) { return k !== ME; });
       view.screen = "detail"; view.id = view.kauf.id; render(); window.scrollTo(0, 0);
+      if (!fuer.length) { toast("Kauf zurückgenommen."); return; }
       toast(andere.length ? "Eingetragen. " + andere.join(", ") + (andere.length > 1 ? " sehen" : " sieht") + " jetzt, was zu zahlen ist.\nAbhaken unter „Meins“." : "Eingetragen.");
     }, fehler);
   },
