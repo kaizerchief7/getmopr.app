@@ -573,6 +573,10 @@ function viewForm(c) {
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
     '<label class="fld"><span class="lbl">Band *</span><input name="band" list="bands" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
     '<datalist id="bands">' + eigeneBands().slice(0, 40).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("") + "</datalist>" +
+    '<div class="stack" style="gap:6px"><span class="lbl">Erst nachsehen: Termin, Preis, Tickets</span><div class="links">' +
+    [["google", "Google"], ["rausgegangen", "Rausgegangen"], ["eventim", "Eventim"], ["ticketmaster", "Ticketmaster"]].map(function (o) {
+      return '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche" data-wo="' + o[0] + '">' + o[1] + " ↗</button>";
+    }).join("") + '</div><span class="hint">Öffnet sich daneben – deine Eingaben hier bleiben stehen.</span></div>' +
     '<div style="display:flex;gap:10px"><label class="fld" style="flex:3 1 0"><span class="lbl">Datum *</span><input name="datum" type="date" required value="' + esc(v.datum) + '"></label>' +
     '<label class="fld" style="flex:2 1 0"><span class="lbl">Beginn</span><input name="beginn" type="time" value="' + esc(v.beginn || "") + '"></label></div>' +
     '<label class="fld"><span class="lbl">Ort</span><input name="ort" list="orte" maxlength="80" autocomplete="off" placeholder="Tippen – bekannte Orte erscheinen" value="' + esc(v.ort || "") + '"></label>' +
@@ -651,6 +655,18 @@ var A = {
     if (!/^[A-ZÄÖÜ]{1,4}$/.test(k)) { toast("Bitte 1–4 Buchstaben, z. B. MK."); return; }
     if (DATA.freunde.some(function (f) { return f.kuerzel === k; })) { toast("Das Kürzel gibt es schon – oben antippen."); return; }
     view.pinFor = k; view.pinNeu = true; view.neuFreund = true; view.screen = "pin"; render(); window.scrollTo(0, 0);
+  },
+  formsuche: function (d) {
+    var f = document.getElementById("f"), band = f ? (f.band.value || "").trim() : "";
+    if (!band) { toast("Erst die Band eintippen."); return; }
+    var ort = (f.ort.value || "").trim(), q = enc(band);
+    var url = {
+      google: "https://www.google.com/search?q=" + enc([band, ort || "München", "Konzert Tickets"].join(" ")),
+      rausgegangen: "https://www.google.com/search?q=" + enc("site:rausgegangen.de " + band),
+      eventim: "https://www.eventim.de/search/?searchterm=" + q,
+      ticketmaster: "https://www.ticketmaster.de/search?q=" + q
+    }[d.wo];
+    if (url) window.open(url, "_blank", "noopener");
   },
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
