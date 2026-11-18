@@ -20,7 +20,7 @@
   var S = {
     user: null, items: [], locations: {}, tags: {}, releases: {},
     view: load("view") || "table", q: "", sort: { key: "artist", dir: 1 },
-    filter: { place: "", genre: "", size: "", tag: "" }, selected: null,
+    filter: { place: "", genre: "", style: "", size: "", tag: "" }, selected: null,
     login: { step: "mail", email: "", busy: false, error: "" }
   };
 
@@ -188,6 +188,7 @@
       '<input type="search" id="q" placeholder="Suchen: Künstler, Titel, Label, Kat.-Nr., Notiz" value="' + esc(S.q) + '">' +
       '<select id="f-place" aria-label="Ort">' + opts(places, "Alle Orte") + "</select>" +
       '<select id="f-genre" aria-label="Genre">' + opts(genres, "Alle Genres") + "</select>" +
+      '<select id="f-style" aria-label="Stil"></select>' +
       '<select id="f-size" aria-label="Format">' + opts(sizes, "Alle Formate") + "</select>" +
       (Object.keys(S.tags).length ? '<select id="f-tag" aria-label="Tag">' + tagOpts + "</select>" : "") +
       '<div class="seg"><button data-view="table">Tabelle</button><button data-view="wall">Cover-Wand</button></div>' +
@@ -197,11 +198,20 @@
 
     $("#f-place").value = S.filter.place; $("#f-genre").value = S.filter.genre; $("#f-size").value = S.filter.size;
     if ($("#f-tag")) $("#f-tag").value = S.filter.tag;
+    // Stil wie in der App: „Sortiert unter“ zählt, sonst erster Discogs-Stil; Auswahl passend zum gewählten Genre
+    function fillStyles() {
+      var st = {};
+      S.items.forEach(function (i) { if (!S.filter.genre || genreOf(i) === S.filter.genre) { var v = styleOf(i); if (v) st[v] = 1; } });
+      if (S.filter.style && !st[S.filter.style]) S.filter.style = "";
+      $("#f-style").innerHTML = opts(st, "Alle Stile");
+      $("#f-style").value = S.filter.style;
+    }
+    fillStyles();
     $("#logout").onclick = function () { sb.auth.signOut(); };
     var t;
     $("#q").oninput = function (e) { clearTimeout(t); t = setTimeout(function () { S.q = e.target.value; renderList(); }, 150); };
-    ["place", "genre", "size", "tag"].forEach(function (k) {
-      var el = $("#f-" + k); if (el) el.onchange = function () { S.filter[k] = el.value; renderList(); };
+    ["place", "genre", "style", "size", "tag"].forEach(function (k) {
+      var el = $("#f-" + k); if (el) el.onchange = function () { S.filter[k] = el.value; if (k === "genre") fillStyles(); renderList(); };
     });
     app.querySelectorAll(".seg button").forEach(function (b) {
       b.onclick = function () { S.view = b.dataset.view; store("view", S.view); renderList(); };
@@ -238,6 +248,7 @@
     var list = S.items.filter(function (i) {
       if (F.place && placeGroup(i) !== F.place) return false;
       if (F.genre && genreOf(i) !== F.genre) return false;
+      if (F.style && styleOf(i) !== F.style) return false;
       if (F.size && size(i) !== F.size) return false;
       if (F.tag && (i.tag_ids || []).indexOf(F.tag) < 0) return false;
       if (!q) return true;
@@ -326,7 +337,7 @@
       (i.favorite ? '<span class="chip">★ Liebling</span>' : "") +
       tagNames.map(function (t) { return '<span class="chip">' + esc(t) + "</span>"; }).join("") + "</div>" +
       "<h3>Meine Platte</h3><dl>" +
-      line("Fach-Position", i.position) + line("Zustand Platte", i.condition_media) + line("Zustand Hülle", i.condition_sleeve) +
+      line("Fach-Position", i.position) + line("Sortiert unter", i.sort_genre) + line("Zustand Platte", i.condition_media) + line("Zustand Hülle", i.condition_sleeve) +
       line("Gekauft", [date(i.purchased_at), euro(i.purchase_price), i.purchased_from].filter(Boolean).join(" · ")) +
       line("Zuletzt gehört", date(i.last_played_at)) + line("Erfasst", date(i.created_at)) + line("Notiz", i.notes) + "</dl>" +
       "<h3>Pressung</h3><dl>" +
