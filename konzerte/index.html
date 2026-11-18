@@ -107,6 +107,7 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .whogrid button.on{background:var(--senf);border-color:var(--senf)}
 .toast{position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;display:flex;gap:10px;align-items:flex-start;padding:14px;background:var(--petrol);color:#F4EBD6;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:5}
 .toast[hidden]{display:none}
+#linkfeld[hidden]{display:none!important}
 .toast span{flex:1;font-size:15px;line-height:21px;white-space:pre-line}
 .toast button{flex:none;min-width:44px;min-height:44px;border:0;border-radius:10px;background:var(--senf);font-weight:700;cursor:pointer}
 .foot{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px;font-size:14px}
@@ -700,15 +701,16 @@ function viewForm(c) {
   orte.sort(function (a, b) { return a.localeCompare(b, "de"); });
   var h = '<div class="nav"><button class="back" type="button" data-act="' + (neu ? "liste" : "open") + '" data-id="' + (c ? c.id : "") + '">‹ Abbrechen</button>' +
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
-    '<label class="fld"><span class="lbl">Band *</span><input name="band" list="bands" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
-    '<datalist id="bands">' + eigeneBands().slice(0, 40).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("") + "</datalist>" +
-    '<div class="card" style="gap:8px"><span class="lbl">Schneller: Link einfügen</span>' +
-    '<span class="hint">In der Rausgegangen-App (oder im Browser) beim Konzert auf <b>Teilen › Link kopieren</b>, dann hier auf „Link einfügen“ – die Felder füllen sich.</span>' +
-    '<div class="links"><button type="button" class="lnk" style="min-height:44px" data-act="einfuegen">Link einfügen</button>' +
+    '<div class="stack" style="gap:6px"><div class="links">' +
+    '<button type="button" class="lnk" style="min-height:44px" data-act="einfuegen">Link einfügen</button>' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche">Im Netz suchen ↗</button></div>' +
-    '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Link zur Konzert-Seite</span>' +
+    '<span class="hint">Beim Konzert (z. B. Rausgegangen) „Link kopieren“, hier einfügen – alles füllt sich. Oder unten selbst eintragen.</span>' +
+    '<div id="linkfeld" hidden style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Link hier einsetzen</span>' +
     '<input id="linkquelle" type="url" inputmode="url" autocomplete="off" placeholder="https://…"></label>' +
     '<button class="secondary" type="button" data-act="linklesen">Übernehmen</button></div><div id="linkwahl" class="stack" style="gap:6px"></div></div>' +
+    '<label class="fld"><span class="lbl">Band *</span><input name="band" list="bands" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
+    '<datalist id="bands">' + eigeneBands().slice(0, 40).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("") + "</datalist>" +
+
     '<div style="display:flex;gap:10px"><label class="fld" style="flex:3 1 0"><span class="lbl">Datum *</span><input name="datum" type="date" required value="' + esc(v.datum) + '"></label>' +
     '<label class="fld" style="flex:2 1 0"><span class="lbl">Beginn</span><input name="beginn" type="time" value="' + esc(v.beginn || "") + '"></label></div>' +
     '<label class="fld"><span class="lbl">Ort</span><input name="ort" list="orte" maxlength="80" autocomplete="off" placeholder="Tippen – bekannte Orte erscheinen" value="' + esc(v.ort || "") + '"></label>' +
@@ -850,11 +852,12 @@ var A = {
   },
   einfuegen: function () {
     var inp = document.getElementById("linkquelle");
-    if (!navigator.clipboard || !navigator.clipboard.readText) { inp.focus(); toast("Bitte unten ins Feld tippen und „Einsetzen“ wählen."); return; }
+    var feld = function (msg) { document.getElementById("linkfeld").hidden = false; inp.focus(); if (msg) toast(msg); };
+    if (!navigator.clipboard || !navigator.clipboard.readText) { feld("Bitte ins Feld tippen und „Einsetzen“ wählen."); return; }
     navigator.clipboard.readText().then(function (t) {
       if (!/https?:\/\//.test(t || "")) { toast("In der Zwischenablage ist kein Link. Erst beim Konzert „Link kopieren“."); return; }
       inp.value = t; A.linklesen();
-    }, function () { inp.focus(); toast("Bitte unten ins Feld tippen und „Einsetzen“ wählen."); });
+    }, function () { feld("Bitte ins Feld tippen und „Einsetzen“ wählen."); });
   },
   linkwahl: function (d) { var e = LINKDATEN[+d.i]; if (e) { document.getElementById("linkwahl").innerHTML = ""; linkFuellen(e, d.q); } },
   allesgesehen: function () { gesLaden(); DATA.konzerte.forEach(function (c) { GES[c.id] = neinListe(c); }); gesSpeichern(); render(); },
