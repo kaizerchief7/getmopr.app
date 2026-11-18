@@ -699,7 +699,7 @@ function viewForm(c) {
   var orte = [];
   DATA.konzerte.forEach(function (x) { if (x.ort && orte.indexOf(x.ort) < 0) orte.push(x.ort); });
   orte.sort(function (a, b) { return a.localeCompare(b, "de"); });
-  var h = '<div class="nav"><button class="back" type="button" data-act="' + (neu ? "liste" : "open") + '" data-id="' + (c ? c.id : "") + '">‹ Abbrechen</button>' +
+  var h = '<div class="nav"><button class="back" type="button" data-act="abbrechen" data-id="' + (c ? c.id : "") + '">‹ Abbrechen</button>' +
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
     '<div class="stack" style="gap:6px"><div class="links">' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="einfuegen">Link einfügen</button>' +
@@ -790,11 +790,22 @@ var A = {
     if (DATA.freunde.some(function (f) { return f.kuerzel === k; })) { toast("Das Kürzel gibt es schon – oben antippen."); return; }
     view.pinFor = k; view.pinNeu = true; view.neuFreund = true; view.screen = "pin"; render(); window.scrollTo(0, 0);
   },
+  abbrechen: function (d) {
+    var f = document.getElementById("f"), geaendert = false;
+    if (f) Array.prototype.forEach.call(f.elements, function (el) {
+      if ((el.type === "checkbox" ? el.checked !== el.defaultChecked : el.value !== el.defaultValue) && el.id !== "linkquelle") geaendert = true;
+    });
+    if (geaendert && !confirm("Eingaben verwerfen?")) return;
+    if (d.id) gehe("detail", d.id); else gehe("list");
+  },
   formsuche: function () {
     var f = document.getElementById("f"), band = f ? (f.band.value || "").trim() : "";
     if (!band) { toast("Erst die Band eintippen."); return; }
     var ort = (f.ort.value || "").trim();
-    window.open("https://www.google.com/search?q=" + enc([band, ort || "München", "Konzert Tickets"].join(" ")), "_blank", "noopener");
+    var a = document.createElement("a");
+    a.href = "https://www.google.com/search?q=" + enc([band, ort || "München", "Konzert Tickets"].join(" "));
+    a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); a.remove();
   },
   linklesen: function () {
     var inp = document.getElementById("linkquelle"), url = (inp && inp.value || "").trim();
