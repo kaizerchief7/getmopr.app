@@ -59,6 +59,9 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .neuinfo{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border:2px solid var(--senf);border-radius:12px;font-size:15px}
 .wahl{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:15px}
 .row.sel{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.legrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.addtop{display:none;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--accent);color:var(--ink);font-family:Oswald,"Arial Narrow",sans-serif;font-size:16px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
+.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:60px;height:60px;border:0;border-radius:50%;background:var(--accent);color:var(--ink);font-size:34px;line-height:1;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(43,26,18,.28);z-index:5}
 .leer{display:flex;align-items:center;justify-content:center;height:60vh;color:var(--muted);text-align:center}
 @media (min-width:1000px){
   body.breit #app{max-width:1180px;padding-bottom:0}
@@ -68,12 +71,13 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
   .duo .bar>div{max-width:none}
   .duo-r .nav .back[data-act=liste]{visibility:hidden}
   body.breit .toast{max-width:420px}
+  .addtop{display:inline-flex;align-items:center}
+  .fab{display:none}
 }
 .seg{flex:1 1 0;min-height:44px;padding:4px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-weight:600;cursor:pointer}
 .seg.on{background:var(--senf);border-color:var(--senf)}
 .segs{display:flex;gap:6px}
 .row{display:flex;gap:12px;width:100%;padding:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer}
-.row.today{border:2px solid var(--accent)}
 .date{flex:none;width:46px;display:flex;flex-direction:column;align-items:center}
 .date small{font-size:12px;font-weight:600;color:var(--muted)}
 .date b{font-family:Oswald,"Arial Narrow",sans-serif;font-size:26px;line-height:30px;font-weight:600}
@@ -305,7 +309,7 @@ function render() {
     if (view.screen === "kauf" && c) rechts = viewKauf(c);
     else if (view.screen === "detail" && c) rechts = viewDetail(c);
     else if (view.screen === "form") rechts = viewForm(c);
-    else { view.screen = "list"; rechts = '<div class="leer">Links ein Konzert antippen<br>oder unten „+ Konzert eintragen“.</div>'; }
+    else { view.screen = "list"; rechts = '<div class="leer">Links ein Konzert antippen<br>oder oben „+ Eintragen“.</div>'; }
     document.body.classList.add("breit");
     app.innerHTML = '<div class="duo"><div class="duo-l">' + viewListe() + '</div><div class="duo-r">' + rechts + "</div></div>";
     var nl = document.querySelector(".duo-l"); if (nl) nl.scrollTop = top;
@@ -420,7 +424,8 @@ function viewListe() {
 
   h += '<div class="segs"><button type="button" class="seg' + (view.tab === "kommend" ? " on" : "") + '" data-act="tab" data-v="kommend">Kommende (' + up.length + ')</button>' +
     '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + past.length + ')</button></div>' +
-    '<div class="chips" aria-hidden="true"><span class="chip st-fix">Fix</span><span class="chip st-geplant">Geplant</span><span class="chip st-eventuell">Vielleicht</span></div>';
+    '<div class="legrow"><div class="chips" aria-hidden="true"><span class="chip st-fix">Fix</span><span class="chip st-geplant">Geplant</span><span class="chip st-eventuell">Vielleicht</span></div>' +
+    '<button class="addtop" type="button" data-act="neu">+ Eintragen</button></div>';
 
   var list = view.tab === "archiv" ? past : up;
   if (!list.length) h += '<p class="hint">Noch nichts hier.</p>';
@@ -429,7 +434,7 @@ function viewListe() {
   h += '</div><div class="foot"><button type="button" data-act="einladen">Link an Freunde schicken</button>' +
     '<button type="button" data-act="neuladen">Aktualisieren</button><a href="datenschutz.html" style="padding:10px 0;font-weight:600">Datenschutz</a></div>' +
     '<a class="mopr" href="https://getmopr.app/" target="_blank" rel="noopener"><span class="rec" aria-hidden="true"></span><span>powered by <b>MOPR</b></span></a>' +
-    '<div class="bar"><div><button class="primary" type="button" data-act="neu">+ Konzert eintragen</button></div></div>';
+    '<button class="fab" type="button" data-act="neu" aria-label="Konzert eintragen" title="Konzert eintragen">+</button>';
   return h;
 }
 
