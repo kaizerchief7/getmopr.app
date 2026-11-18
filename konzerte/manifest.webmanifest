@@ -1,0 +1,13 @@
+{
+  "name": "Konzerte in der großen Stadt",
+  "short_name": "Konzerte",
+  "scope": "/konzerte/",
+  "display": "standalone",
+  "background_color": "#F4EBD6",
+  "theme_color": "#F4EBD6",
+  "lang": "de",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

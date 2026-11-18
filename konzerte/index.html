@@ -10,6 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Konzerte">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png?v=2">
 <link rel="icon" type="image/png" href="icon-180.png?v=2">
 <title>Konzerte in der großen Stadt</title>
@@ -137,6 +138,57 @@ body.busy #app{opacity:.6;pointer-events:none}
 var FN = "https://nazewbepsrjmvpkycymg.supabase.co/functions/v1/Konzerte";
 var LINK_FN = "https://nazewbepsrjmvpkycymg.supabase.co/functions/v1/konzert-link";
 var LINKDATEN = [];
+var PUSH_FN = "https://nazewbepsrjmvpkycymg.supabase.co/functions/v1/konzert-push";
+var PUSH_GEHT = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+function pushApi(action, body) {
+  var h = { "content-type": "application/json", "x-gruppe": KEY };
+  if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
+  return fetch(PUSH_FN, { method: "POST", headers: h, body: JSON.stringify(Object.assign({ action: action }, body || {})) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Fehler " + r.status); return j; }); });
+}
+// Nach dem Speichern melden, was passiert ist – der Server liest die Fakten selbst und schickt an die anderen
+function meldePush(action, p) {
+  var typ = null, kid = null;
+  if (action === "konzert_speichern" && p.konzert && !p.konzert.id) typ = "neu";
+  else if (action === "teilnahme" && (p.status === "nein" || p.frei > 0)) { typ = "absage"; kid = p.konzert_id; }
+  else if (action === "notiz_neu") { typ = "notiz"; kid = p.konzert_id; }
+  if (typ) pushApi("ereignis", { typ: typ, konzert_id: kid }).catch(function () {});
+}
+function unb64u(s) {
+  var t = s.replace(/-/g, "+").replace(/_/g, "/"); t += "===".slice((t.length + 3) % 4);
+  var b = atob(t), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u;
+}
+function swReg() { return navigator.serviceWorker.register("sw.js").then(function () { return navigator.serviceWorker.ready; }); }
+function pushAbo() { return swReg().then(function (r) { return r.pushManager.getSubscription(); }); }
+function badgeWeg() {
+  try { if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch (e) {}
+  if (PUSH_GEHT && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(function (r) { return r.getNotifications(); }).then(function (n) { n.forEach(function (x) { x.close(); }); }).catch(function () {});
+}
+// Bereich „Mitteilungen“ in Meins – wird nach dem Zeichnen nachgefüllt
+function pushBox() {
+  var box = document.getElementById("pushbox"); if (!box) return;
+  if (!PUSH_GEHT) {
+    box.innerHTML = '<span class="hint"><b>So geht es:</b> Die Konzertliste auf den Home-Bildschirm legen (in Safari <b>Teilen › Zum Home-Bildschirm</b>) und von dort öffnen. ' +
+      "Liegt sie schon dort und du siehst trotzdem diesen Hinweis: das Symbol einmal löschen und neu ablegen.</span>";
+    return;
+  }
+  if (Notification.permission === "denied") { box.innerHTML = '<span class="hint">Mitteilungen sind für diese App ausgeschaltet. Einschalten: iPhone-<b>Einstellungen › Mitteilungen › Konzerte</b>.</span>'; return; }
+  pushAbo().then(function (sub) {
+    if (!sub) return null;
+    return pushApi("status", { endpoint: sub.endpoint }).then(function (j) { return j.aktiv ? j.wahl : null; });
+  }).then(function (wahl) {
+    var w = wahl || load("pushwahl") || "alles";
+    var segs = '<div class="segs">' + [["alles", "Alles"], ["wichtig", "Nur Absagen & freie Karten"]].map(function (o) {
+      return '<button type="button" class="seg' + (w === o[0] ? " on" : "") + '" data-act="pushwahl" data-v="' + o[0] + '" aria-pressed="' + (w === o[0]) + '">' + o[1] + "</button>";
+    }).join("") + "</div>";
+    box.innerHTML = wahl
+      ? '<span style="font-size:15px"><b>✓ An</b> auf diesem Handy.</span>' + segs +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" data-act="pushtest">Test schicken</button>' +
+        '<button class="secondary" type="button" data-act="pushaus">Ausschalten</button></div>'
+      : '<span class="hint">Bekomme eine Mitteilung, wenn jemand ein Konzert einträgt, absagt, eine Karte abgibt oder eine Notiz schreibt – mit roter Zahl am Symbol. Deine eigenen Einträge meldet es dir nicht.</span>' + segs +
+        '<button class="primary" type="button" data-act="pushan">Mitteilungen einschalten</button>';
+  }, function () { box.innerHTML = '<span class="hint">Gerade nicht erreichbar – bitte später nochmal.</span>'; });
+}
 // Übernimmt nur Fakten in das Formular; vorhandene Eingaben bei Band bleiben stehen
 function linkFuellen(e, quelle) {
   var f = document.getElementById("f"); if (!f) return;
@@ -184,7 +236,7 @@ function api(action, payload) {
   if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
   return fetch(FN, { method: "POST", headers: h, body: JSON.stringify(body) })
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.fehler || "Fehler " + r.status); e.status = r.status; e.code = j.code || ""; throw e; } return j; }); })
-    .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [], ich: j.ich || null }; return j; })
+    .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [], ich: j.ich || null }; meldePush(action, payload || {}); return j; })
     .finally(function () { busy = false; document.body.classList.remove("busy"); });
 }
 function fehler(e) {
@@ -260,7 +312,7 @@ function render() {
     return;
   }
   document.body.classList.remove("breit");
-  if (view.screen === "meins") { app.innerHTML = viewMeins(); return; }
+  if (view.screen === "meins") { app.innerHTML = viewMeins(); pushBox(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
   if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); }
   else if (view.screen === "form") app.innerHTML = viewForm(c);
@@ -600,6 +652,7 @@ function viewMeins() {
     c.leute.forEach(function (p) { if (p.kuerzel !== ME && (p.status === "fix" || p.status === "geplant")) mit[p.kuerzel] = (mit[p.kuerzel] || 0) + 1; });
   });
   var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a] || a.localeCompare(b); }).slice(0, 3).map(function (k) { return k + " (" + o[k] + ")"; }).join(", "); };
+  h += '<section class="stack" style="gap:10px"><span class="over">Mitteilungen aufs Handy</span><div id="pushbox" class="stack" style="gap:10px"><span class="hint">…</span></div></section>';
   h += '<section class="stack" style="gap:10px"><span class="over">Mein Musikdienst zum Reinhören</span><div class="segs">';
   Object.keys(DIENSTE).forEach(function (k) {
     h += '<button type="button" class="seg' + (dienst() === k ? " on" : "") + '" data-act="dienst" data-v="' + k + '" aria-pressed="' + (dienst() === k) + '">' + DIENSTE[k][0] + "</button>";
@@ -762,6 +815,39 @@ var A = {
       }, function (e) { toast((e.message || "Hat nicht geklappt") + "\nDann bitte selbst ausfüllen."); })
       .finally(function () { busy = false; document.body.classList.remove("busy"); });
   },
+  pushan: function () {
+    var wahl = load("pushwahl") || "alles";
+    // Erst fragen (muss direkt auf den Tipp folgen), dann Gerät anmelden
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== "granted") { toast("Ohne Erlaubnis geht es nicht. Später in den iPhone-Einstellungen änderbar."); pushBox(); return; }
+      return Promise.all([swReg(), pushApi("schluessel")]).then(function (x) {
+        return x[0].pushManager.getSubscription().then(function (alt) {
+          return alt || x[0].pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: unb64u(x[1].public) });
+        });
+      }).then(function (sub) {
+        var j = sub.toJSON();
+        return pushApi("abo", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, wahl: wahl });
+      }).then(function () { toast("Mitteilungen sind an. Tipp auf „Test schicken“ zum Ausprobieren."); pushBox(); });
+    }).catch(function (e) { toast((e && e.message) || "Hat nicht geklappt"); pushBox(); });
+  },
+  pushwahl: function (d) {
+    store("pushwahl", d.v);
+    pushAbo().then(function (sub) {
+      if (!sub) { pushBox(); return; }
+      var j = sub.toJSON();
+      return pushApi("abo", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, wahl: d.v }).then(function () { pushBox(); toast("Gespeichert."); });
+    }).catch(function () { pushBox(); });
+  },
+  pushtest: function () {
+    pushApi("test").then(function (j) { toast(j.gesendet ? "Test ist unterwegs – gleich sollte eine Mitteilung kommen." : "Kein Gerät erreicht. Bitte aus- und wieder einschalten."); }, function (e) { toast(e.message); });
+  },
+  pushaus: function () {
+    pushAbo().then(function (sub) {
+      if (!sub) return;
+      var ep = sub.endpoint;
+      return sub.unsubscribe().then(function () { return pushApi("abbestellen", { endpoint: ep }); });
+    }).then(function () { toast("Mitteilungen sind aus."); pushBox(); }, function () { pushBox(); });
+  },
   einfuegen: function () {
     var inp = document.getElementById("linkquelle");
     if (!navigator.clipboard || !navigator.clipboard.readText) { inp.focus(); toast("Bitte unten ins Feld tippen und „Einsetzen“ wählen."); return; }
@@ -893,9 +979,11 @@ function start() {
   });
 }
 document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible") badgeWeg();
   if (document.visibilityState === "visible" && KEY && DATA && view.screen !== "form" && !busy) api("laden").then(render, function () {});
 });
 start();
+if (PUSH_GEHT) { navigator.serviceWorker.register("sw.js").catch(function () {}); badgeWeg(); }
 </script>
 </body>
 </html>
