@@ -1,9 +1,10 @@
+@font-face { font-family:"Alfa Slab One"; src:url(app/fonts/AlfaSlabOne-Regular.ttf); font-display:swap; }
 :root { --bg:#10292B; --surface:#1B3D40; --line:#3F7275; --ink:#F4EBD6; --muted:#B9C7C2; --accent:#E8875F; --mustard:#E9B23F; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
 main { max-width:720px; margin:0 auto; padding:48px 22px 80px; }
-h1 { font-size:44px; letter-spacing:.02em; margin:0 0 4px; }
-h1 .o { display:inline-block; width:.78em; height:.78em; border-radius:50%; background:radial-gradient(circle, var(--bg) 0 8%, var(--accent) 9% 30%, #111 31%); vertical-align:-.08em; }
+h1 { font-family:"Alfa Slab One", serif; font-weight:400; font-size:48px; letter-spacing:0; margin:0 0 4px; }
+h1 .o { display:inline-block; width:.86em; height:.86em; vertical-align:-.04em; margin:0 .05em; background:url(platte.svg) center/contain no-repeat; }
 h2 { color:var(--accent); font-size:20px; margin:34px 0 6px; }
 .lead { color:var(--mustard); font-size:20px; margin:0 0 28px; }
 p, li { color:var(--ink); }
