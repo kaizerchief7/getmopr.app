@@ -54,6 +54,20 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .b-frei{background:var(--surface);border:1.5px solid var(--accent);color:var(--accent-text)}
 .b-tipp{border:1px solid var(--muted);color:var(--muted)}
 .b-sold{border:1px solid var(--error);color:var(--error)}
+.b-neu{background:var(--senf);color:#2B1A12}
+.neuinfo{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border:2px solid var(--senf);border-radius:12px;font-size:15px}
+.wahl{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:15px}
+.row.sel{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.leer{display:flex;align-items:center;justify-content:center;height:60vh;color:var(--muted);text-align:center}
+@media (min-width:1000px){
+  body.breit #app{max-width:1180px;padding-bottom:0}
+  .duo{display:grid;grid-template-columns:minmax(380px,460px) minmax(0,1fr);gap:32px;height:100vh;height:100dvh}
+  .duo>div{overflow-y:auto;padding:0 18px 24px;min-width:0}
+  .duo .bar{position:sticky;bottom:0;margin:20px -18px 0}
+  .duo .bar>div{max-width:none}
+  .duo-r .nav .back[data-act=liste]{visibility:hidden}
+  body.breit .toast{max-width:420px}
+}
 .seg{flex:1 1 0;min-height:44px;padding:4px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-weight:600;cursor:pointer}
 .seg.on{background:var(--senf);border-color:var(--senf)}
 .segs{display:flex;gap:6px}
@@ -121,6 +135,19 @@ body.busy #app{opacity:.6;pointer-events:none}
 "use strict";
 // Supabase-Projekt „recordstore“ – Adresse der Serverfunktion (öffentlich, kein Geheimnis)
 var FN = "https://nazewbepsrjmvpkycymg.supabase.co/functions/v1/Konzerte";
+var LINK_FN = "https://nazewbepsrjmvpkycymg.supabase.co/functions/v1/konzert-link";
+var LINKDATEN = [];
+// Übernimmt nur Fakten in das Formular; vorhandene Eingaben bei Band bleiben stehen
+function linkFuellen(e, quelle) {
+  var f = document.getElementById("f"); if (!f) return;
+  if (!f.band.value.trim()) f.band.value = e.band;
+  if (e.datum) f.datum.value = e.datum;
+  if (e.beginn) f.beginn.value = e.beginn;
+  if (e.ort) f.ort.value = e.ort;
+  if (e.preis) f.preis.value = e.preis;
+  if (e.ticket_link) f.ticket_link.value = e.ticket_link;
+  toast("Übernommen von " + (quelle || "der Seite") + " – bitte kurz prüfen." + (e.abgesagt ? "\nAchtung: dort als abgesagt markiert." : ""));
+}
 
 var WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 var MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
@@ -218,12 +245,50 @@ function render() {
   if (view.screen === "pin" && view.pinFor) { app.innerHTML = viewPin(); return; }
   if (!ME || !PIN || view.screen === "wer") { app.innerHTML = viewWer(); return; }
   var c = view.id ? konzert(view.id) : null;
+  if (view.screen === "detail" && c) gesehen(c);
+  // Desktop (breites Fenster): Liste links, Konzert/Formular rechts – am iPhone unverändert
+  if (BREIT.matches && view.screen !== "meins") {
+    var l = document.querySelector(".duo-l"), top = l ? l.scrollTop : 0, rechts;
+    if (view.screen === "kauf" && c) rechts = viewKauf(c);
+    else if (view.screen === "detail" && c) rechts = viewDetail(c);
+    else if (view.screen === "form") rechts = viewForm(c);
+    else { view.screen = "list"; rechts = '<div class="leer">Links ein Konzert antippen<br>oder unten „+ Konzert eintragen“.</div>'; }
+    document.body.classList.add("breit");
+    app.innerHTML = '<div class="duo"><div class="duo-l">' + viewListe() + '</div><div class="duo-r">' + rechts + "</div></div>";
+    var nl = document.querySelector(".duo-l"); if (nl) nl.scrollTop = top;
+    if (view.screen === "detail" && c) appleKuenstler();
+    return;
+  }
+  document.body.classList.remove("breit");
   if (view.screen === "meins") { app.innerHTML = viewMeins(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
   if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); }
   else if (view.screen === "form") app.innerHTML = viewForm(c);
   else { view.screen = "list"; app.innerHTML = viewListe(); }
 }
+var BREIT = window.matchMedia("(min-width: 1000px)");
+try { BREIT.addEventListener("change", function () { if (DATA) render(); }); } catch (e) {}
+
+// ---------------------------------------------------------------- Neu seit dem letzten Besuch
+// Merkt sich je Gerät, welche Konzerte und Absagen man schon gesehen hat (nur im Browser, nichts auf dem Server).
+var GES = null;
+function gesLaden() {
+  if (GES) return GES;
+  try { GES = JSON.parse(load("gesehen") || "null"); } catch (e) { GES = null; }
+  if (!GES) { GES = {}; DATA.konzerte.forEach(function (c) { GES[c.id] = neinListe(c); }); gesSpeichern(); }
+  return GES;
+}
+function gesSpeichern() { store("gesehen", JSON.stringify(GES)); }
+function neinListe(c) { return c.leute.filter(function (p) { return p.status === "nein"; }).map(function (p) { return p.kuerzel; }); }
+function neues(c) {
+  var g = gesLaden(), r = { neu: false, ab: [] };
+  if (c.datum < heute()) return r;
+  if (!(c.id in g)) { if (c.erstellt_von && c.erstellt_von !== ME) { r.neu = true; return r; } }
+  var alt = g[c.id] || [];
+  r.ab = neinListe(c).filter(function (k) { return k !== ME && alt.indexOf(k) < 0; });
+  return r;
+}
+function gesehen(c) { var g = gesLaden(); g[c.id] = neinListe(c); gesSpeichern(); }
 
 function viewOhneLink() {
   return '<div class="msg"><h1>Konzerte</h1>' +
@@ -273,6 +338,14 @@ function viewListe() {
       (ab.schulde > 0 ? "Du schuldest <b>" + eur(ab.schulde) + "</b>" : "") + "</span></button>";
   }
 
+  var nNeu = 0, nAb = 0;
+  up.forEach(function (c) { var n = neues(c); if (n.neu) nNeu++; nAb += n.ab.length; });
+  if (nNeu || nAb) {
+    h += '<div class="neuinfo"><span><b>Neu seit deinem letzten Besuch:</b> ' +
+      [nNeu ? plural(nNeu, "Konzert", "Konzerte") : "", nAb ? plural(nAb, "Absage", "Absagen") : ""].filter(Boolean).join(" · ") +
+      '</span><button class="back" type="button" data-act="allesgesehen" style="flex:none;padding:0">Gesehen</button></div>';
+  }
+
   var free = [];
   up.forEach(function (c) { c.leute.forEach(function (p) { if (p.frei > 0) free.push({ c: c, p: p }); }); });
   if (free.length) {
@@ -310,13 +383,16 @@ function viewListe() {
 function rowHtml(c, t) {
   var f = fmt(c.datum), today = c.datum === t, act = sortLeute(c.leute.filter(function (p) { return p.status !== "nein"; }));
   var fr = sumFrei(c), badges = "";
+  var nn = neues(c);
+  if (nn.neu) badges += '<span class="badge b-neu">Neu' + (c.erstellt_von ? " von " + esc(c.erstellt_von) : "") + "</span>";
+  nn.ab.forEach(function (k) { badges += '<span class="badge b-neu">' + esc(k) + " sagt ab</span>"; });
   if (today) badges += '<span class="badge b-today">Heute</span>';
   if (!act.length && c.datum >= t) badges += '<span class="badge b-tipp">Tipp – wer hat Lust?</span>';
   if (c.ausverkauft) badges += '<span class="badge b-sold">Ausverkauft</span>';
   if (fr > 0 && c.datum >= t) badges += '<span class="badge b-frei">' + plural(fr, "Karte", "Karten") + ' frei</span>';
   if (c.notizen && c.notizen.length) badges += '<span class="badge b-tipp">' + plural(c.notizen.length, "Notiz", "Notizen") + "</span>";
   var chips = act.map(function (p) { return '<span class="chip st-' + p.status + '">' + esc(p.kuerzel) + (p.karten > 1 ? " ×" + p.karten : "") + "</span>"; }).join("");
-  return '<button type="button" class="row' + (today ? " today" : "") + '" data-act="open" data-id="' + c.id + '">' +
+  return '<button type="button" class="row' + (today ? " today" : "") + (BREIT.matches && view.id === c.id && view.screen !== "list" ? " sel" : "") + '" data-act="open" data-id="' + c.id + '">' +
     '<span class="date" aria-hidden="true"><small>' + f.wd + "</small><b>" + f.day + "</b><small>" + f.mon + (f.year !== new Date().getFullYear() ? " " + String(f.year).slice(2) : "") + "</small></span>" +
     '<span class="rmain">' + (badges ? '<span class="chips">' + badges + "</span>" : "") +
     '<span class="band">' + esc(c.band) + '</span><span class="meta">' + esc([c.ort, c.beginn, c.preis].filter(Boolean).join(" · ")) + "</span>" +
@@ -573,10 +649,12 @@ function viewForm(c) {
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
     '<label class="fld"><span class="lbl">Band *</span><input name="band" list="bands" required maxlength="120" autocomplete="off" value="' + esc(v.band) + '"></label>' +
     '<datalist id="bands">' + eigeneBands().slice(0, 40).map(function (b) { return '<option value="' + esc(b) + '">'; }).join("") + "</datalist>" +
-    '<div class="stack" style="gap:6px"><span class="lbl">Erst nachsehen: Termin, Preis, Tickets</span><div class="links">' +
-    [["google", "Google"], ["rausgegangen", "Rausgegangen"], ["eventim", "Eventim"], ["ticketmaster", "Ticketmaster"]].map(function (o) {
-      return '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche" data-wo="' + o[0] + '">' + o[1] + " ↗</button>";
-    }).join("") + '</div><span class="hint">Öffnet sich daneben – deine Eingaben hier bleiben stehen.</span></div>' +
+    '<div class="card" style="gap:8px"><span class="lbl">Schneller: Link einfügen</span>' +
+    '<span class="hint">Konzert-Seite suchen (Rausgegangen, Eventim, München Ticket, Club …), Link kopieren und hier einfügen – die Felder füllen sich.</span>' +
+    '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche">Im Netz suchen ↗</button>' +
+    '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Link zur Konzert-Seite</span>' +
+    '<input id="linkquelle" type="url" inputmode="url" autocomplete="off" placeholder="https://…"></label>' +
+    '<button class="secondary" type="button" data-act="linklesen">Übernehmen</button></div><div id="linkwahl" class="stack" style="gap:6px"></div></div>' +
     '<div style="display:flex;gap:10px"><label class="fld" style="flex:3 1 0"><span class="lbl">Datum *</span><input name="datum" type="date" required value="' + esc(v.datum) + '"></label>' +
     '<label class="fld" style="flex:2 1 0"><span class="lbl">Beginn</span><input name="beginn" type="time" value="' + esc(v.beginn || "") + '"></label></div>' +
     '<label class="fld"><span class="lbl">Ort</span><input name="ort" list="orte" maxlength="80" autocomplete="off" placeholder="Tippen – bekannte Orte erscheinen" value="' + esc(v.ort || "") + '"></label>' +
@@ -656,18 +734,35 @@ var A = {
     if (DATA.freunde.some(function (f) { return f.kuerzel === k; })) { toast("Das Kürzel gibt es schon – oben antippen."); return; }
     view.pinFor = k; view.pinNeu = true; view.neuFreund = true; view.screen = "pin"; render(); window.scrollTo(0, 0);
   },
-  formsuche: function (d) {
+  formsuche: function () {
     var f = document.getElementById("f"), band = f ? (f.band.value || "").trim() : "";
     if (!band) { toast("Erst die Band eintippen."); return; }
-    var ort = (f.ort.value || "").trim(), q = enc(band);
-    var url = {
-      google: "https://www.google.com/search?q=" + enc([band, ort || "München", "Konzert Tickets"].join(" ")),
-      rausgegangen: "https://www.google.com/search?q=" + enc("site:rausgegangen.de " + band),
-      eventim: "https://www.eventim.de/search/?searchterm=" + q,
-      ticketmaster: "https://www.ticketmaster.de/search?q=" + q
-    }[d.wo];
-    if (url) window.open(url, "_blank", "noopener");
+    var ort = (f.ort.value || "").trim();
+    window.open("https://www.google.com/search?q=" + enc([band, ort || "München", "Konzert Tickets"].join(" ")), "_blank", "noopener");
   },
+  linklesen: function () {
+    var inp = document.getElementById("linkquelle"), url = (inp && inp.value || "").trim();
+    var m = url.match(/https?:\/\/\S+/);
+    if (!m) { toast("Bitte einen Link einfügen (https://…)."); return; }
+    url = m[0];
+    busy = true; document.body.classList.add("busy");
+    fetch(LINK_FN, { method: "POST", headers: { "content-type": "application/json", "x-gruppe": KEY }, body: JSON.stringify({ url: url }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Fehler " + r.status); return j; }); })
+      .then(function (j) {
+        LINKDATEN = j.events || [];
+        var box = document.getElementById("linkwahl");
+        if (!LINKDATEN.length) { box.innerHTML = ""; toast("Auf dieser Seite stehen keine lesbaren Termine – bitte selbst ausfüllen."); return; }
+        if (LINKDATEN.length === 1) { box.innerHTML = ""; linkFuellen(LINKDATEN[0], j.quelle); return; }
+        box.innerHTML = '<span class="lbl">' + LINKDATEN.length + " Termine gefunden – welcher?</span>" + LINKDATEN.map(function (e, i) {
+          var fd = fmt(e.datum);
+          return '<button type="button" class="wahl" data-act="linkwahl" data-i="' + i + '" data-q="' + esc(j.quelle) + '"><b>' + esc(fd.wd + " " + fd.day + ". " + fd.mon + " " + fd.year + (e.beginn ? ", " + e.beginn : "")) + "</b>" +
+            '<span class="meta">' + esc([e.ort, e.preis].filter(Boolean).join(" · ") || e.titel) + (e.abgesagt ? " · abgesagt" : "") + "</span></button>";
+        }).join("");
+      }, function (e) { toast((e.message || "Hat nicht geklappt") + "\nDann bitte selbst ausfüllen."); })
+      .finally(function () { busy = false; document.body.classList.remove("busy"); });
+  },
+  linkwahl: function (d) { var e = LINKDATEN[+d.i]; if (e) { document.getElementById("linkwahl").innerHTML = ""; linkFuellen(e, d.q); } },
+  allesgesehen: function () { gesLaden(); DATA.konzerte.forEach(function (c) { GES[c.id] = neinListe(c); }); gesSpeichern(); render(); },
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
   dienst: function (d) { store("dienst", d.v); render(); },
