@@ -60,6 +60,8 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .wahl{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:15px}
 .row.sel{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
 .legrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.suche{display:flex;gap:6px;align-items:center}.suche input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font:inherit;font-size:16px;color:var(--ink)}
+.jahr{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;padding:0 4px;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:Oswald,"Arial Narrow",sans-serif;font-size:18px;font-weight:600;color:var(--ink);cursor:pointer}
 .addtop{display:none;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--accent);color:var(--ink);font-family:Oswald,"Arial Narrow",sans-serif;font-size:16px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
 .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:60px;height:60px;border:0;border-radius:50%;background:var(--accent);color:var(--ink);font-size:34px;line-height:1;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(43,26,18,.28);z-index:5}
 .leer{display:flex;align-items:center;justify-content:center;height:60vh;color:var(--muted);text-align:center}
@@ -264,6 +266,80 @@ function bildSenden(datei) {
 }
 document.addEventListener("change", function (e) { if (e.target && e.target.id === "bildquelle") bildSenden(e.target.files && e.target.files[0]); });
 
+// ---------------------------------------------------------------- Liste: Suche + Jahre
+function norm(x) { return String(x || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/ß/g, "ss"); }
+function trifft(c, q) {
+  var w = norm(q).split(/\s+/).filter(Boolean);
+  var txt = norm([c.band, c.ort, c.notiz, c.datum.slice(0, 4), c.leute.filter(function (p) { return p.status !== "nein"; }).map(function (p) { return p.kuerzel; }).join(" ")].join(" "));
+  return w.every(function (x) { return txt.indexOf(x) >= 0; });
+}
+function listeInhalt() {
+  var t = heute(), h = "";
+  var up = DATA.konzerte.filter(function (c) { return c.datum >= t; });
+  var past = DATA.konzerte.filter(function (c) { return c.datum < t; }).reverse();
+  if (view.q) {
+    // Suche über alles (kommend + vergangen); ältere werden dafür einmal nachgeladen
+    var tr = up.filter(function (c) { return trifft(c, view.q); }).concat(past.filter(function (c) { return trifft(c, view.q); }));
+    if (!ARCHIV_DA && DATA.aeltere > 0) h += '<span class="hint">Suche auch in älteren Konzerten …</span>';
+    if (!tr.length) h += '<p class="hint">Nichts gefunden.</p>';
+    tr.slice(0, 100).forEach(function (c) { h += rowHtml(c, t); });
+    if (tr.length > 100) h += '<span class="hint">… und ' + (tr.length - 100) + " weitere – bitte genauer suchen.</span>";
+    return h;
+  }
+  if (view.tab !== "archiv") {
+    if (!up.length) h += '<p class="hint">Noch nichts hier.</p>';
+    up.forEach(function (c) { h += rowHtml(c, t); });
+    return h;
+  }
+  // Waren wir: nach Jahren, zum Auf- und Zuklappen; dieses Jahr (bzw. das jüngste) offen
+  var proJahr = {};
+  past.forEach(function (c) { var y = c.datum.slice(0, 4); (proJahr[y] = proJahr[y] || []).push(c); });
+  var jahre = {}, srv = (!ARCHIV_DA && DATA.jahre) || {};
+  Object.keys(proJahr).forEach(function (y) { jahre[y] = proJahr[y].length; });
+  Object.keys(srv).forEach(function (y) { jahre[y] = (jahre[y] || 0) + srv[y]; });
+  var liste = Object.keys(jahre).sort().reverse();
+  if (!liste.length) return '<p class="hint">Noch nichts hier.</p>';
+  if (!view.offen) { view.offen = {}; view.offen[liste[0]] = true; }
+  liste.forEach(function (y) {
+    var auf = !!view.offen[y];
+    h += '<button type="button" class="jahr" data-act="jahr" data-y="' + y + '" aria-expanded="' + auf + '"><span>' + y + '</span><span class="meta">' + plural(jahre[y], "Konzert", "Konzerte") + " " + (auf ? "▾" : "▸") + "</span></button>";
+    if (auf) (proJahr[y] || []).forEach(function (c) { h += rowHtml(c, t); });
+  });
+  return h;
+}
+function listeNeu() { var l = document.getElementById("lst"); if (l) l.innerHTML = listeInhalt(); }
+document.addEventListener("input", function (e) {
+  if (!e.target || e.target.id !== "suche") return;
+  view.q = e.target.value.trim();
+  listeNeu();
+  if (view.q && !ARCHIV_DA && DATA.aeltere > 0 && !view.ladeArchiv) {
+    view.ladeArchiv = true;
+    api("archiv", {}, true).then(function () { view.ladeArchiv = false; listeNeu(); }, function () { view.ladeArchiv = false; });
+  }
+});
+
+// Doppelt? Gleiches Datum und ähnliche Band (Wörter, Tippfehler) oder gleicher Ort
+function bandAehnlich(a, b) {
+  var x = norm(a).replace(/[^a-z0-9]+/g, " ").trim().replace(/^(the|die|the) /, ""), y = norm(b).replace(/[^a-z0-9]+/g, " ").trim().replace(/^(the|die) /, "");
+  if (!x || !y) return false;
+  if (x === y || x.indexOf(y) === 0 || y.indexOf(x) === 0) return true;
+  var xs = x.replace(/ /g, ""), ys = y.replace(/ /g, "");
+  if (xs === ys) return true;
+  if (Math.abs(xs.length - ys.length) > 2) return false;
+  var d = [], i, j; // Tippfehler-Abstand (Levenshtein), höchstens 2
+  for (i = 0; i <= xs.length; i++) { d[i] = [i]; }
+  for (j = 1; j <= ys.length; j++) d[0][j] = j;
+  for (i = 1; i <= xs.length; i++) for (j = 1; j <= ys.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (xs[i - 1] === ys[j - 1] ? 0 : 1));
+  return d[xs.length][ys.length] <= (xs.length > 6 ? 2 : 1);
+}
+function doppelt(k) {
+  var o = norm(k.ort).replace(/[^a-z0-9]/g, "");
+  return DATA.konzerte.filter(function (c) {
+    if (c.datum !== k.datum || c.id === k.id) return false;
+    return bandAehnlich(c.band, k.band) || (o && norm(c.ort).replace(/[^a-z0-9]/g, "") === o);
+  })[0];
+}
+
 var WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 var MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 var ORD = { fix: 0, geplant: 1, eventuell: 2, nein: 3 };
@@ -324,7 +400,7 @@ function mischen(j) {
   alle.sort(function (a, b) { return (a.datum + (a.beginn || "")).localeCompare(b.datum + (b.beginn || "")); });
   var seen = {};
   alle = alle.filter(function (c) { if (seen[c.id]) return false; seen[c.id] = true; return true; });
-  DATA = { freunde: j.freunde || [], konzerte: alle, ich: j.ich || null, ab: ab, aeltere: j.aeltere || 0 };
+  DATA = { freunde: j.freunde || [], konzerte: alle, ich: j.ich || null, ab: ab, aeltere: j.aeltere || 0, jahre: j.jahre || (DATA && DATA.jahre) || {} };
 }
 function fehler(e) {
   if (e && e.status === 401) { store("k", null); KEY = null; render(); return; }
@@ -545,18 +621,12 @@ function viewListe() {
 
   h += '<div class="segs"><button type="button" class="seg' + (view.tab === "kommend" ? " on" : "") + '" data-act="tab" data-v="kommend">Kommende (' + up.length + ')</button>' +
     '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + (past.length + (ARCHIV_DA ? 0 : DATA.aeltere || 0)) + ')</button></div>' +
+    '<div class="suche"><input id="suche" type="search" enterkeyhint="search" autocomplete="off" placeholder="Suchen: Band, Ort, Kürzel, Jahr" value="' + esc(view.q || "") + '">' +
+    (view.q ? '<button type="button" class="back" data-act="suchweg" aria-label="Suche löschen">✕</button>' : "") + "</div>" +
     '<div class="legrow"><div class="chips" aria-hidden="true"><span class="chip st-fix">Fix</span><span class="chip st-geplant">Geplant</span><span class="chip st-eventuell">Vielleicht</span></div>' +
     '<button class="addtop" type="button" data-act="neu">+ Eintragen</button></div>';
 
-  var list = view.tab === "archiv" ? past : up;
-  if (!list.length) h += '<p class="hint">Noch nichts hier.</p>';
-  // Lange Archive nicht auf einmal zeichnen (kleines Handy, Mobilfunk)
-  var zeig = view.tab === "archiv" ? (view.archivN || 60) : list.length;
-  list.slice(0, zeig).forEach(function (c) { h += rowHtml(c, t); });
-  if (view.tab === "archiv") {
-    if (list.length > zeig) h += '<button class="secondary" type="button" data-act="archivmehr">Weitere ' + Math.min(60, list.length - zeig) + " zeigen (" + (list.length - zeig) + " übrig)</button>";
-    else if (!ARCHIV_DA && DATA.aeltere > 0) h += '<button class="secondary" type="button" data-act="archivladen">Ältere Konzerte laden (' + DATA.aeltere + ")</button>";
-  }
+  h += '<div id="lst" class="stack">' + listeInhalt() + "</div>";
 
   h += '</div><div class="foot"><button type="button" data-act="einladen">Link an Freunde schicken</button>' +
     '<button type="button" data-act="neuladen">Aktualisieren</button><a href="datenschutz.html" style="padding:10px 0;font-weight:600">Datenschutz</a></div>' +
@@ -1082,9 +1152,15 @@ var A = {
     if (v && !/^\d+(\.\d{1,2})?$/.test(v)) { toast("Bitte als Zahl, z. B. 61,80."); return; }
     api("betrag", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME, betrag: v || null }).then(render, fehler);
   },
-  tab: function (d) { view.tab = d.v; view.archivN = 60; render(); },
-  archivmehr: function () { view.archivN = (view.archivN || 60) + 60; render(); },
-  archivladen: function () { api("archiv").then(function () { render(); }, fehler); },
+  tab: function (d) { view.tab = d.v; render(); },
+  jahr: function (d) {
+    view.offen = view.offen || {};
+    view.offen[d.y] = !view.offen[d.y];
+    // Jahr liegt (teilweise) vor dem Zeitfenster und ist noch nicht geladen → einmal nachladen
+    if (view.offen[d.y] && !ARCHIV_DA && DATA.jahre && DATA.jahre[d.y]) { api("archiv").then(render, fehler); return; }
+    render();
+  },
+  suchweg: function () { view.q = ""; render(); },
   tippweg: function () { store("tipp-weg", "1"); render(); },
   open: function (d) { if (d.id) gehe("detail", d.id); else gehe("list"); },
   neu: function () { gehe("form", null); },
@@ -1130,6 +1206,11 @@ var A = {
     var neu = view.screen === "form" && !view.id;
     var on = document.querySelector("#ich .seg.on");
     var k = { id: view.id || undefined, band: g("band"), datum: g("datum"), beginn: g("beginn"), ort: g("ort"), preis: g("preis"), vorverkauf: g("vorverkauf"), ticket_link: link, notiz: g("notiz"), ausverkauft: !!(f.elements.ausverkauft && f.elements.ausverkauft.checked) };
+    var dop = neu ? doppelt(k) : null;
+    if (dop) {
+      var fd = fmt(dop.datum);
+      if (!confirm("Am " + fd.day + ". " + fd.mon + " steht schon „" + dop.band + "“" + (dop.ort ? " (" + dop.ort + ")" : "") + " in der Liste.\n\nOK = trotzdem neu anlegen\nAbbrechen = das vorhandene öffnen")) { gehe("detail", dop.id); toast("Hier kannst du dich eintragen."); return; }
+    }
     api("konzert_speichern", { konzert: k, wer: ME, ich_status: on ? on.getAttribute("data-v") : "" }).then(function (j) {
       view.screen = "detail"; view.id = j.id || view.id; render(); window.scrollTo(0, 0);
       if (neu) toast("Gespeichert.\nJetzt unten „An die Gruppe schicken“ – dann wissen alle Bescheid.");
