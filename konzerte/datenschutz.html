@@ -25,6 +25,7 @@
     <li><strong>Konzerte</strong> – Band, Datum, Ort, Beginn, Preis, Ticket-Link, Notiz und wer den Eintrag angelegt hat.</li>
     <li><strong>Teilnahme</strong> je Kürzel – Status (fix, geplant, eventuell, nein), Karten, wer eine Karte gekauft hat, Beträge und ob bezahlt ist. Beträge sieht nur, wer selbst beteiligt ist.</li>
     <li><strong>Notizen</strong> zu einem Konzert, mit Kürzel und Zeitpunkt.</li>
+    <li><strong>Mitteilungen</strong> (nur wenn du sie unter „Meins“ einschaltest): die technische Empfangsadresse deines Geräts beim Mitteilungsdienst von Apple bzw. Google, dein Kürzel und deine Wahl („Alles“ oder „Nur Absagen & freie Karten“). Ausschalten löscht den Eintrag.</li>
     <li><strong>setlist.fm-Name</strong> (nur wenn du ihn unter „Meins“ einträgst) und wann zuletzt abgeglichen wurde; bei geholten Konzerten die Kennung und der Link der Setlist.</li>
   </ul>
 
@@ -36,6 +37,8 @@
     <li><strong>Supabase</strong> – Datenbank und Serverfunktion, Rechenzentrum in Frankfurt am Main (EU).</li>
     <li><strong>GitHub Pages</strong> – liefert die Seite aus (GitHub, USA). Dabei kann technisch bedingt deine IP-Adresse protokolliert werden.</li>
     <li><strong>Apple</strong> – nur beim Anlegen eines Konzerts: Der eingetippte Bandname wird für Vorschläge an Apples Suche geschickt.</li>
+    <li><strong>Link-Vorschau</strong> – nur wenn du beim Eintragen einen Link einfügst: Die Serverfunktion ruft genau diese eine Seite einmal ab und übernimmt Band, Datum, Ort und Preis. Protokolliert wird nur der Name der Seite, nicht der Link.</li>
+    <li><strong>Mitteilungsdienste</strong> von Apple bzw. Google – nur bei eingeschalteten Mitteilungen; sie stellen die Nachricht zu (verschlüsselt, Inhalt nur für dein Gerät lesbar).</li>
     <li><strong>setlist.fm</strong> (Live Nation/Ticketmaster) – nur wenn du deinen setlist.fm-Namen einträgst: Die Serverfunktion fragt mit diesem Namen deine öffentliche Liste besuchter Konzerte ab (beim Verbinden, auf Knopfdruck und höchstens einmal am Tag beim Öffnen). Es wird nichts an setlist.fm geschickt außer dem Namen. Trennen unter „Meins“ beendet das.</li>
     <li><strong>Links nach außen</strong> (Google, Google Maps, Eventim, Ticketmaster, Setlist.fm, Spotify, Apple Music, YouTube Music) – nur wenn du sie antippst; dann gelten die Bedingungen des jeweiligen Anbieters.</li>
   </ul>
