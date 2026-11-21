@@ -712,14 +712,14 @@ function viewMeins() {
     '<div class="stat"><b>' + (ausg ? eur(Math.round(ausg)).replace(",00", "") : "–") + "</b><span>für Karten" + (ausgUnsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
     (top(orte) ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(top(orte)) + "</span>" : "") +
     (top(mit) ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(top(mit)) + "</span>" : "") +
-    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. ' + ((ichFreund() || {}).setlistfm ? "Ältere Konzerte kommen von setlist.fm." : "Die Liste beginnt im Oktober 2026 – ältere Konzerte holt der setlist.fm-Abgleich.") + '</span></section></div>';
+    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. ' + ((ichFreund() || {}).setlistfm ? "Konzerte ab Januar 2026 kommen auch von setlist.fm." : "Die Liste beginnt im Oktober 2026 – Konzerte ab Januar holt der setlist.fm-Abgleich (Meins › setlist.fm).") + '</span></section></div>';
   return h;
 }
 
 function viewSetlist() {
   var f = ichFreund() || {}, h = '<section class="stack" style="gap:10px"><span class="over">setlist.fm</span>';
   if (!f.setlistfm) {
-    h += '<span class="hint">Holt alle Konzerte, die du auf setlist.fm als besucht oder vorgemerkt hast – einmal am Tag automatisch. Andersrum geht es nicht: setlist.fm lässt von außen nichts eintragen. Dafür führt bei jedem Konzert ein Link direkt zur Setlist.</span>' +
+    h += '<span class="hint">Holt deine Konzerte ab 2026, die du auf setlist.fm als besucht oder vorgemerkt hast – einmal am Tag automatisch. Andersrum geht es nicht: setlist.fm lässt von außen nichts eintragen. Dafür führt bei jedem Konzert ein Link direkt zur Setlist.</span>' +
       '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Dein Name auf setlist.fm</span><input id="slname" maxlength="40" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></label>' +
       '<button class="secondary" type="button" data-act="slverbinden">Verbinden</button></div>';
   } else {
