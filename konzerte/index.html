@@ -253,20 +253,40 @@ function leseSchluessel() {
 }
 
 // ---------------------------------------------------------------- Server
-function api(action, payload) {
+function api(action, payload, still) {
   var body = Object.assign({ action: action }, payload || {});
-  busy = true; document.body.classList.add("busy");
+  if (!still) { busy = true; document.body.classList.add("busy"); }
   var h = { "content-type": "application/json", "x-gruppe": KEY };
   if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
   return fetch(FN, { method: "POST", headers: h, body: JSON.stringify(body) })
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.fehler || "Fehler " + r.status); e.status = r.status; e.code = j.code || ""; throw e; } return j; }); })
     .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [], ich: j.ich || null }; meldePush(action, payload || {}); return j; })
-    .finally(function () { busy = false; document.body.classList.remove("busy"); });
+    .finally(function () { if (!still) { busy = false; document.body.classList.remove("busy"); } });
 }
 function fehler(e) {
   if (e && e.status === 401) { store("k", null); KEY = null; render(); return; }
   if (e && e.code === "pin") { PIN = null; store("pin", null); view.screen = "wer"; render(); window.scrollTo(0, 0); toast(e.message + "."); return; }
   toast((e && e.message ? e.message : "Hat nicht geklappt") + ".\nBitte nochmal versuchen.");
+}
+
+// ---------------------------------------------------------------- setlist.fm
+function ichFreund() { return (DATA && DATA.freunde || []).filter(function (f) { return f.kuerzel === ME; })[0] || null; }
+function setlistText(i) {
+  if (!i) return "";
+  var t = [];
+  if (i.neu) t.push(plural(i.neu, "Konzert neu", "Konzerte neu"));
+  if (i.eingetragen - i.neu > 0) t.push((i.eingetragen - i.neu) + " vorhandene mit dir");
+  if (i.entfernt) t.push(i.entfernt + " entfernt");
+  return t.length ? "setlist.fm: " + t.join(", ") + "." : "setlist.fm: alles schon da.";
+}
+// Einmal am Tag beim Öffnen still im Hintergrund abgleichen
+function setlistAuto() {
+  var f = ichFreund();
+  if (!f || !f.setlistfm || !PIN) return;
+  if (f.setlistfm_abgleich && Date.now() - new Date(f.setlistfm_abgleich).getTime() < 20 * 3600 * 1000) return;
+  api("setlist_abgleich", {}, true).then(function (j) {
+    if (j.info && (j.info.neu || j.info.eingetragen || j.info.entfernt)) { if (view.screen !== "form") render(); toast(setlistText(j.info)); }
+  }, function () {});
 }
 
 // ---------------------------------------------------------------- Helfer Daten
@@ -561,7 +581,8 @@ function viewDetail(c) {
     L.push(["Ticketmaster", "https://www.ticketmaster.de/search?q=" + enc(c.band)]);
   }
   L.push(["Anfahrt", "https://www.google.com/maps/search/?api=1&query=" + enc(q)]);
-  L.push(["Setlists", "https://www.setlist.fm/search?query=" + enc(c.band)]);
+  // Direkt zur Setlist (dort auch „Ich war da“ bzw. vormerken) – sonst Suche nach Band und Datum
+  L.push(c.setlist_url ? ["Setlist (setlist.fm)", c.setlist_url] : ["Setlists", "https://www.setlist.fm/search?query=" + enc(c.band + " " + c.datum.slice(0, 4))]);
   L.push(["Reinhören (" + DIENSTE[dienst()][0].replace(" Music", "") + ")", DIENSTE[dienst()][1](c.band)]);
   if (!past) L.push(["In Kalender", FN + "?ics=" + c.id + "&k=" + KEY]);
   h += '<section class="stack" style="gap:8px"><span class="over">Links</span><div class="links">';
@@ -677,6 +698,7 @@ function viewMeins() {
     c.leute.forEach(function (p) { if (p.kuerzel !== ME && (p.status === "fix" || p.status === "geplant")) mit[p.kuerzel] = (mit[p.kuerzel] || 0) + 1; });
   });
   var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a] || a.localeCompare(b); }).slice(0, 3).map(function (k) { return k + " (" + o[k] + ")"; }).join(", "); };
+  h += viewSetlist();
   h += '<section class="stack" style="gap:10px"><span class="over">Mitteilungen aufs Handy</span><div id="pushbox" class="stack" style="gap:10px"><span class="hint">…</span></div></section>';
   h += '<section class="stack" style="gap:10px"><span class="over">Mein Musikdienst zum Reinhören</span><div class="segs">';
   Object.keys(DIENSTE).forEach(function (k) {
@@ -690,8 +712,24 @@ function viewMeins() {
     '<div class="stat"><b>' + (ausg ? eur(Math.round(ausg)).replace(",00", "") : "–") + "</b><span>für Karten" + (ausgUnsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
     (top(orte) ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(top(orte)) + "</span>" : "") +
     (top(mit) ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(top(mit)) + "</span>" : "") +
-    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. Die Liste beginnt im Oktober 2026.</span></section></div>';
+    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. ' + ((ichFreund() || {}).setlistfm ? "Ältere Konzerte kommen von setlist.fm." : "Die Liste beginnt im Oktober 2026 – ältere Konzerte holt der setlist.fm-Abgleich.") + '</span></section></div>';
   return h;
+}
+
+function viewSetlist() {
+  var f = ichFreund() || {}, h = '<section class="stack" style="gap:10px"><span class="over">setlist.fm</span>';
+  if (!f.setlistfm) {
+    h += '<span class="hint">Holt alle Konzerte, die du auf setlist.fm als besucht oder vorgemerkt hast – einmal am Tag automatisch. Andersrum geht es nicht: setlist.fm lässt von außen nichts eintragen. Dafür führt bei jedem Konzert ein Link direkt zur Setlist.</span>' +
+      '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Dein Name auf setlist.fm</span><input id="slname" maxlength="40" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></label>' +
+      '<button class="secondary" type="button" data-act="slverbinden">Verbinden</button></div>';
+  } else {
+    var am = f.setlistfm_abgleich ? new Date(f.setlistfm_abgleich) : null;
+    h += '<span style="font-size:15px"><b>✓ Verbunden</b> als ' + esc(f.setlistfm) + (am ? ' <span class="meta">· zuletzt ' + am.getDate() + ". " + MON[am.getMonth()] + ", " + pad(am.getHours()) + ":" + pad(am.getMinutes()) + "</span>" : "") + "</span>" +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" data-act="slabgleich">Jetzt abgleichen</button>' +
+      '<button class="secondary" type="button" data-act="sltrennen">Trennen</button></div>' +
+      '<span class="hint">Was du hier selbst änderst, bleibt so. Trennen lässt die geholten Konzerte stehen.</span>';
+  }
+  return h + "</section>";
 }
 
 function viewKauf(c) {
@@ -896,6 +934,17 @@ var A = {
     }, function () { feld("Bitte ins Feld tippen und „Einsetzen“ wählen."); });
   },
   linkwahl: function (d) { var e = LINKDATEN[+d.i]; if (e) { document.getElementById("linkwahl").innerHTML = ""; linkFuellen(e, d.q); } },
+  slverbinden: function () {
+    var n = (document.getElementById("slname").value || "").trim();
+    if (!n) { toast("Erst deinen setlist.fm-Namen eintippen."); return; }
+    api("setlist_name", { name: n }).then(function () { return api("setlist_abgleich"); })
+      .then(function (j) { render(); toast(setlistText(j.info)); }, function (e) { render(); fehler(e); });
+  },
+  slabgleich: function () { api("setlist_abgleich").then(function (j) { render(); toast(setlistText(j.info)); }, fehler); },
+  sltrennen: function () {
+    if (!confirm("setlist.fm trennen? Die geholten Konzerte bleiben in der Liste.")) return;
+    api("setlist_name", { name: null }).then(render, fehler);
+  },
   allesgesehen: function () { gesLaden(); DATA.konzerte.forEach(function (c) { GES[c.id] = neinListe(c); }); gesSpeichern(); render(); },
   liste: function () { gehe("list"); },
   meins: function () { gehe("meins"); },
@@ -1012,6 +1061,7 @@ function start() {
     if (ME && !DATA.freunde.some(function (f) { return f.kuerzel === ME; })) { ME = null; store("me", null); }
     if (ME && PIN && DATA.ich !== ME) { PIN = null; store("pin", null); }
     render();
+    setlistAuto();
   }, function (e) {
     if (e.status === 401) { fehler(e); return; }
     document.getElementById("app").innerHTML = '<div class="msg"><h1>Konzerte</h1><p>Gerade keine Verbindung.</p><button class="secondary" type="button" onclick="start()">Nochmal versuchen</button></div>';
