@@ -78,6 +78,8 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
 .seg.on{background:var(--senf);border-color:var(--senf)}
 .segs{display:flex;gap:6px}
 .row{display:flex;gap:12px;width:100%;padding:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.row.neu{border:2px solid var(--senf);padding:11px}
+.neuinfo[data-act]{cursor:pointer}
 .date{flex:none;width:46px;display:flex;flex-direction:column;align-items:center}
 .date small{font-size:12px;font-weight:600;color:var(--muted)}
 .date b{font-family:Oswald,"Arial Narrow",sans-serif;font-size:26px;line-height:30px;font-weight:600}
@@ -154,6 +156,9 @@ function pushApi(action, body) {
 // Nach dem Speichern melden, was passiert ist – der Server liest die Fakten selbst und schickt an die anderen
 function meldePush(action, p) {
   var typ = null, kid = null;
+  // Korrekturen an vergangenen Konzerten melden wir niemandem
+  var alt = p && p.konzert_id && DATA ? konzert(p.konzert_id) : null;
+  if (alt && alt.datum < heute()) return;
   if (action === "konzert_speichern" && p.konzert && !p.konzert.id) typ = "neu";
   else if (action === "teilnahme" && (p.status === "nein" || p.frei > 0)) { typ = "absage"; kid = p.konzert_id; }
   else if (action === "notiz_neu") { typ = "notiz"; kid = p.konzert_id; }
@@ -479,9 +484,10 @@ function viewListe() {
   var nNeu = 0, nAb = 0;
   up.forEach(function (c) { var n = neues(c); if (n.neu) nNeu++; nAb += n.ab.length; });
   if (nNeu || nAb) {
-    h += '<div class="neuinfo"><span><b>Neu seit deinem letzten Besuch:</b> ' +
+    // Ganzer Kasten antippbar: springt zum ersten neuen Konzert (dort gilt es dann als gesehen)
+    h += '<div class="neuinfo" role="button" tabindex="0" data-act="neuspringen"><span><b>Neu seit deinem letzten Besuch:</b> ' +
       [nNeu ? plural(nNeu, "Konzert", "Konzerte") : "", nAb ? plural(nAb, "Absage", "Absagen") : ""].filter(Boolean).join(" · ") +
-      '</span><button class="back" type="button" data-act="allesgesehen" style="flex:none;padding:0">Gesehen</button></div>';
+      ' <b aria-hidden="true">›</b></span><button class="back" type="button" data-act="allesgesehen" style="flex:none;padding:0">Alle gesehen</button></div>';
   }
 
   var free = [];
@@ -537,7 +543,7 @@ function rowHtml(c, t) {
   if (fr > 0 && c.datum >= t) badges += '<span class="badge b-frei">' + plural(fr, "Karte", "Karten") + ' frei</span>';
   if (c.notizen && c.notizen.length) badges += '<span class="badge b-tipp">' + plural(c.notizen.length, "Notiz", "Notizen") + "</span>";
   var chips = act.map(function (p) { return '<span class="chip st-' + p.status + '">' + esc(p.kuerzel) + (p.karten > 1 ? " ×" + p.karten : "") + "</span>"; }).join("");
-  return '<button type="button" class="row' + (today ? " today" : "") + (BREIT.matches && view.id === c.id && view.screen !== "list" ? " sel" : "") + '" data-act="open" data-id="' + c.id + '">' +
+  return '<button type="button" class="row' + (today ? " today" : "") + (nn.neu || nn.ab.length ? " neu" : "") + (BREIT.matches && view.id === c.id && view.screen !== "list" ? " sel" : "") + '" data-act="open" data-id="' + c.id + '">' +
     '<span class="date" aria-hidden="true"><small>' + f.wd + "</small><b>" + f.day + "</b><small>" + f.mon + (f.year !== new Date().getFullYear() ? " " + String(f.year).slice(2) : "") + "</small></span>" +
     '<span class="rmain">' + (badges ? '<span class="chips">' + badges + "</span>" : "") +
     '<span class="band">' + esc(c.band) + '</span><span class="meta">' + esc([c.ort, c.beginn, c.preis].filter(Boolean).join(" · ")) + "</span>" +
@@ -598,6 +604,12 @@ function viewDetail(c) {
     h += '<button class="secondary" type="button" data-act="kauf">Ich habe Karten gekauft …</button>';
     if (m) h += '<button class="back" type="button" data-act="austragen" style="align-self:flex-start;padding:0">Mich ganz austragen</button>';
     h += "</section>";
+  } else {
+    // Vergangen: jeder korrigiert nur sich selbst (war dabei / nicht dabei)
+    var dabei = !!(m && (m.status === "fix" || m.status === "geplant"));
+    h += '<section class="stack" style="gap:10px"><span class="over">Ich (' + esc(ME) + ")</span><div class=\"segs\">" +
+      '<button type="button" class="seg' + (dabei ? " on" : "") + '" data-act="st" data-v="fix" aria-pressed="' + dabei + '">War dabei</button>' +
+      '<button type="button" class="seg' + (!dabei ? " on" : "") + '" data-act="warnicht" aria-pressed="' + !dabei + '">War nicht dabei</button></div></section>';
   }
 
   var leute = sortLeute(c.leute).filter(function (p) { return !past || p.status === "fix" || p.status === "geplant"; });
@@ -975,6 +987,16 @@ var A = {
   sltrennen: function () {
     if (!confirm("setlist.fm trennen? Die geholten Konzerte bleiben in der Liste.")) return;
     api("setlist_name", { name: null }).then(render, fehler);
+  },
+  neuspringen: function () {
+    var t = heute(), c = DATA.konzerte.filter(function (x) { if (x.datum < t) return false; var n = neues(x); return n.neu || n.ab.length; })[0];
+    if (c) gehe("detail", c.id); else render();
+  },
+  warnicht: function () {
+    // Vergangenes Konzert: „War nicht dabei“. Mit Abrechnung bleibt der Eintrag (als „Kann nicht“), sonst austragen.
+    var c = konzert(view.id), m = mein(c);
+    if (!m) return;
+    teilnahme(c, m.gekauft_von ? { status: "nein" } : { status: null }).then(render, fehler);
   },
   allesgesehen: function () { gesLaden(); DATA.konzerte.forEach(function (c) { GES[c.id] = neinListe(c); }); gesSpeichern(); render(); },
   liste: function () { gehe("list"); },
