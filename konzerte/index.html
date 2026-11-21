@@ -802,12 +802,16 @@ function toast(msg) {
   el.querySelector("span").textContent = msg; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 9000);
 }
+// Zurück zur Liste = wieder an die Stelle, an der man war (Handy; am Desktop bleibt die Liste ohnehin stehen)
+function zurListe() { window.scrollTo(0, view.listY || 0); }
 function gehe(screen, id) {
   var vorher = view.screen;
-  view.screen = screen; view.id = id || null; render(); window.scrollTo(0, 0);
+  if (vorher === "list" && screen !== "list") view.listY = window.scrollY;
+  view.screen = screen; view.id = id || null; render();
+  if (screen === "list" && vorher !== "list") zurListe(); else window.scrollTo(0, 0);
   if (screen !== "list" && vorher === "list") { try { history.pushState({ s: 1 }, ""); } catch (e) {} }
 }
-window.addEventListener("popstate", function () { if (view.screen !== "list") { view.screen = "list"; render(); } });
+window.addEventListener("popstate", function () { if (view.screen !== "list") { view.screen = "list"; render(); zurListe(); } });
 
 function teilnahme(c, neu) {
   var m = mein(c) || {};
