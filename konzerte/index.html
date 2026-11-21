@@ -646,7 +646,11 @@ function viewDetail(c) {
   L.push(["Reinhören (" + DIENSTE[dienst()][0].replace(" Music", "") + ")", DIENSTE[dienst()][1](c.band)]);
   if (!past) L.push(["In Kalender", FN + "?ics=" + c.id + "&k=" + KEY]);
   h += '<section class="stack" style="gap:8px"><span class="over">Links</span><div class="links">';
-  L.forEach(function (l) { h += '<a class="lnk" href="' + esc(l[1]) + '" target="_blank" rel="noopener noreferrer"' + (l[0].indexOf("Reinhören") === 0 ? ' id="reinhoeren" data-band="' + esc(c.band) + '"' : "") + ">" + esc(l[0]) + "</a>"; });
+  L.forEach(function (l) {
+    // setlist.fm im echten Safari öffnen (dort ist man angemeldet und kann „I was there“ setzen)
+    var sl = /^https:\/\/www\.setlist\.fm\//.test(l[1]) ? ' data-act="safari" data-url="' + esc(l[1]) + '"' : "";
+    h += '<a class="lnk" href="' + esc(l[1]) + '" target="_blank" rel="noopener noreferrer"' + sl + (l[0].indexOf("Reinhören") === 0 ? ' id="reinhoeren" data-band="' + esc(c.band) + '"' : "") + ">" + esc(l[0]) + "</a>";
+  });
   h += "</div>";
   if (!past) h += '<button class="primary" type="button" data-act="teilen" data-id="' + c.id + '" style="margin-top:6px">An die Gruppe schicken</button>';
   h += "</section></div>";
@@ -988,6 +992,16 @@ var A = {
     if (!confirm("setlist.fm trennen? Die geholten Konzerte bleiben in der Liste.")) return;
     api("setlist_name", { name: null }).then(render, fehler);
   },
+  safari: function (d) {
+    var url = d.url, ios = /iPhone|iPad|iPod/.test(navigator.userAgent), app = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+    if (!(ios && app)) { window.open(url, "_blank", "noopener"); return; }
+    // Home-Bildschirm-App auf dem iPhone: Links öffnen sonst in einem Fenster ohne Safari-Anmeldung.
+    // „x-safari-https://“ öffnet Safari selbst; klappt das nicht, normal öffnen.
+    var weg = false, h = function () { if (document.visibilityState === "hidden") weg = true; };
+    document.addEventListener("visibilitychange", h);
+    location.href = "x-safari-" + url;
+    setTimeout(function () { document.removeEventListener("visibilitychange", h); if (!weg) window.open(url, "_blank", "noopener"); }, 900);
+  },
   neuspringen: function () {
     var t = heute(), c = DATA.konzerte.filter(function (x) { if (x.datum < t) return false; var n = neues(x); return n.neu || n.ab.length; })[0];
     if (c) gehe("detail", c.id); else render();
@@ -1107,6 +1121,12 @@ document.addEventListener("click", function (e) {
   if (!el || busy) return;
   var fn = A[el.getAttribute("data-act")];
   if (fn) { e.preventDefault(); fn(el.dataset, el); }
+});
+
+// Link ins Feld eingesetzt → sofort übernehmen (kein extra „Übernehmen“-Tipp)
+document.addEventListener("paste", function (e) {
+  if (!e.target || e.target.id !== "linkquelle") return;
+  setTimeout(function () { if (/https?:\/\//.test(e.target.value || "") && !busy) A.linklesen(); }, 0);
 });
 
 function start() {
