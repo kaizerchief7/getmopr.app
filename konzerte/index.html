@@ -230,6 +230,40 @@ function linkVorschlag(j) {
   toast((j.quelle || "Die Seite") + " lässt keine Vorschau zu. Link ist übernommen" + (w ? ", Band aus der Adresse – bitte prüfen" : "") + ". Datum bitte selbst eintragen.");
 }
 
+// Ergebnis von Link- oder Bild-Erkennung ins Formular bringen (ein Termin: direkt; mehrere: Auswahl)
+function linkErgebnis(j) {
+  if (j.gesperrt) { linkVorschlag(j); return; }
+  LINKDATEN = j.events || [];
+  var box = document.getElementById("linkwahl"); if (!box) return;
+  if (!LINKDATEN.length) { box.innerHTML = ""; toast((j.quelle === "dem Bild" ? "Auf dem Bild habe ich kein Konzert erkannt" : "Auf dieser Seite stehen keine lesbaren Termine") + " – bitte selbst ausfüllen."); return; }
+  if (LINKDATEN.length === 1) { box.innerHTML = ""; linkFuellen(LINKDATEN[0], j.quelle); return; }
+  box.innerHTML = '<span class="lbl">' + LINKDATEN.length + " Termine gefunden – welcher?</span>" + LINKDATEN.map(function (e, i) {
+    var fd = fmt(e.datum);
+    return '<button type="button" class="wahl" data-act="linkwahl" data-i="' + i + '" data-q="' + esc(j.quelle) + '"><b>' + esc(e.band) + " · " + esc(fd.wd + " " + fd.day + ". " + fd.mon + " " + fd.year + (e.beginn ? ", " + e.beginn : "")) + "</b>" +
+      '<span class="meta">' + esc([e.ort, e.preis].filter(Boolean).join(" · ") || e.titel) + (e.abgesagt ? " · abgesagt" : "") + "</span></button>";
+  }).join("");
+}
+
+// Bild verkleinern (lange Seite max. 1568 px, JPEG) und an die Erkennung schicken – das Bild wird nicht gespeichert
+function bildSenden(datei) {
+  if (!datei) return;
+  var url = URL.createObjectURL(datei), img = new Image();
+  busy = true; document.body.classList.add("busy"); toast("Lese das Bild …");
+  img.onload = function () {
+    var f = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight));
+    var cv = document.createElement("canvas"); cv.width = Math.round(img.naturalWidth * f); cv.height = Math.round(img.naturalHeight * f);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    var b64 = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
+    fetch(LINK_FN, { method: "POST", headers: { "content-type": "application/json", "x-gruppe": KEY }, body: JSON.stringify({ bild: b64 }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Fehler " + r.status); return j; }); })
+      .then(function (j) { linkErgebnis(j); }, function (e) { toast((e.message || "Hat nicht geklappt") + "\nDann bitte selbst ausfüllen."); })
+      .finally(function () { busy = false; document.body.classList.remove("busy"); });
+  };
+  img.onerror = function () { URL.revokeObjectURL(url); busy = false; document.body.classList.remove("busy"); toast("Das Bild konnte ich nicht öffnen."); };
+  img.src = url;
+}
+document.addEventListener("change", function (e) { if (e.target && e.target.id === "bildquelle") bildSenden(e.target.files && e.target.files[0]); });
+
 var WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 var MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 var ORD = { fix: 0, geplant: 1, eventuell: 2, nein: 3 };
@@ -806,8 +840,10 @@ function viewForm(c) {
     '<span style="font-family:Oswald,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
     '<div class="stack" style="gap:6px"><div class="links">' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="einfuegen">Link einfügen</button>' +
+    '<button type="button" class="lnk" style="min-height:44px" data-act="bildwahl">Foto / Screenshot</button>' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche">Im Netz suchen ↗</button></div>' +
-    '<span class="hint">Beim Konzert (z. B. Rausgegangen) „Link kopieren“, hier einfügen – alles füllt sich. Oder unten selbst eintragen.</span>' +
+    '<input id="bildquelle" type="file" accept="image/*" hidden>' +
+    '<span class="hint">Link einfügen (z. B. aus Rausgegangen) oder einen Screenshot bzw. ein Foto vom Plakat wählen – alles füllt sich. Oder unten selbst eintragen.</span>' +
     '<div id="linkfeld" hidden style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Link hier einsetzen</span>' +
     '<input id="linkquelle" type="url" inputmode="url" autocomplete="off" placeholder="https://…"></label>' +
     '<button class="secondary" type="button" data-act="linklesen">Übernehmen</button></div><div id="linkwahl" class="stack" style="gap:6px"></div></div>' +
@@ -922,20 +958,10 @@ var A = {
     busy = true; document.body.classList.add("busy");
     fetch(LINK_FN, { method: "POST", headers: { "content-type": "application/json", "x-gruppe": KEY }, body: JSON.stringify({ url: url }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Fehler " + r.status); return j; }); })
-      .then(function (j) {
-        if (j.gesperrt) { linkVorschlag(j); return; }
-        LINKDATEN = j.events || [];
-        var box = document.getElementById("linkwahl");
-        if (!LINKDATEN.length) { box.innerHTML = ""; toast("Auf dieser Seite stehen keine lesbaren Termine – bitte selbst ausfüllen."); return; }
-        if (LINKDATEN.length === 1) { box.innerHTML = ""; linkFuellen(LINKDATEN[0], j.quelle); return; }
-        box.innerHTML = '<span class="lbl">' + LINKDATEN.length + " Termine gefunden – welcher?</span>" + LINKDATEN.map(function (e, i) {
-          var fd = fmt(e.datum);
-          return '<button type="button" class="wahl" data-act="linkwahl" data-i="' + i + '" data-q="' + esc(j.quelle) + '"><b>' + esc(fd.wd + " " + fd.day + ". " + fd.mon + " " + fd.year + (e.beginn ? ", " + e.beginn : "")) + "</b>" +
-            '<span class="meta">' + esc([e.ort, e.preis].filter(Boolean).join(" · ") || e.titel) + (e.abgesagt ? " · abgesagt" : "") + "</span></button>";
-        }).join("");
-      }, function (e) { toast((e.message || "Hat nicht geklappt") + "\nDann bitte selbst ausfüllen."); })
+      .then(function (j) { linkErgebnis(j); }, function (e) { toast((e.message || "Hat nicht geklappt") + "\nDann bitte selbst ausfüllen."); })
       .finally(function () { busy = false; document.body.classList.remove("busy"); });
   },
+  bildwahl: function () { var i = document.getElementById("bildquelle"); if (i) { i.value = ""; i.click(); } },
   pushan: function () {
     var wahl = load("pushwahl") || "alles";
     // Erst fragen (muss direkt auf den Tipp folgen), dann Gerät anmelden
