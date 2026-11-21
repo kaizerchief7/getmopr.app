@@ -206,6 +206,25 @@ function linkFuellen(e, quelle) {
   toast("Übernommen von " + (quelle || "der Seite") + " – bitte kurz prüfen." + (e.abgesagt ? "\nAchtung: dort als abgesagt markiert." : ""));
 }
 
+// Shop sperrt die Vorschau (Eventim, München Ticket): Link übernehmen, Band/Ort aus der Adresse vorschlagen
+function linkVorschlag(j) {
+  var f = document.getElementById("f"); if (!f) return;
+  var v = j.vorschlag || {}, w = (v.woerter || "").trim(), ort = "";
+  var norm = function (x) { return x.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, " ").trim(); };
+  var nw = norm(w);
+  DATA.konzerte.forEach(function (c) {
+    if (!c.ort) return;
+    var no = norm(c.ort.split(/[\/,(]/)[0]);
+    if (no && (nw === no || nw.slice(-no.length - 1) === " " + no) && no.length > norm(ort).length) ort = c.ort;
+  });
+  if (ort) w = w.split(" ").slice(0, nw.split(" ").length - norm(ort.split(/[\/,(]/)[0]).split(" ").length).join(" ");
+  if (v.ticket_link) f.ticket_link.value = v.ticket_link;
+  if (w && !f.band.value.trim()) f.band.value = w;
+  if (ort && !f.ort.value.trim()) f.ort.value = ort;
+  document.getElementById("linkwahl").innerHTML = "";
+  toast((j.quelle || "Die Seite") + " lässt keine Vorschau zu. Link ist übernommen" + (w ? ", Band aus der Adresse – bitte prüfen" : "") + ". Datum bitte selbst eintragen.");
+}
+
 var WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 var MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 var ORD = { fix: 0, geplant: 1, eventuell: 2, nein: 3 };
@@ -821,6 +840,7 @@ var A = {
     fetch(LINK_FN, { method: "POST", headers: { "content-type": "application/json", "x-gruppe": KEY }, body: JSON.stringify({ url: url }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || "Fehler " + r.status); return j; }); })
       .then(function (j) {
+        if (j.gesperrt) { linkVorschlag(j); return; }
         LINKDATEN = j.events || [];
         var box = document.getElementById("linkwahl");
         if (!LINKDATEN.length) { box.innerHTML = ""; toast("Auf dieser Seite stehen keine lesbaren Termine – bitte selbst ausfüllen."); return; }
