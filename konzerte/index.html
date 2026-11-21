@@ -260,13 +260,55 @@ function api(action, payload, still) {
   if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
   return fetch(FN, { method: "POST", headers: h, body: JSON.stringify(body) })
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.fehler || "Fehler " + r.status); e.status = r.status; e.code = j.code || ""; throw e; } return j; }); })
-    .then(function (j) { DATA = { freunde: j.freunde || [], konzerte: j.konzerte || [], ich: j.ich || null }; meldePush(action, payload || {}); return j; })
+    .then(function (j) { mischen(j); meldePush(action, payload || {}); return j; })
     .finally(function () { if (!still) { busy = false; document.body.classList.remove("busy"); } });
+}
+// Für Antworten ohne Liste (z. B. Statistik): kein Sperren der Seite, DATA bleibt unverändert
+function rohApi(action, payload) {
+  var h = { "content-type": "application/json", "x-gruppe": KEY };
+  if (ME && PIN) { h["x-wer"] = ME; h["x-pin"] = PIN; }
+  return fetch(FN, { method: "POST", headers: h, body: JSON.stringify(Object.assign({ action: action }, payload || {})) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.fehler || "Fehler " + r.status); return j; }); });
+}
+// Der Server schickt nur ein Zeitfenster (ab j.ab) plus geänderte/offene ältere Konzerte.
+// Ältere, die schon geladen wurden („Ältere laden“), bleiben im ARCHIV und werden aufgefrischt.
+var ARCHIV = {}, ARCHIV_DA = false;
+function mischen(j) {
+  var ab = j.ab || "0000-00-00", neu = j.konzerte || [];
+  (j.archiv || []).forEach(function (c) { ARCHIV[c.id] = c; });
+  if (j.archiv) ARCHIV_DA = true;
+  var fenster = {};
+  neu.forEach(function (c) { if (c.datum < ab) ARCHIV[c.id] = c; else fenster[c.id] = true; });
+  // Ein Konzert, das gelöscht wurde oder sein Datum geändert hat, nicht doppelt zeigen
+  Object.keys(ARCHIV).forEach(function (id) { if (fenster[id] || ARCHIV[id].datum >= ab) delete ARCHIV[id]; });
+  var alle = neu.filter(function (c) { return c.datum >= ab; }).concat(Object.keys(ARCHIV).map(function (id) { return ARCHIV[id]; }));
+  alle.sort(function (a, b) { return (a.datum + (a.beginn || "")).localeCompare(b.datum + (b.beginn || "")); });
+  var seen = {};
+  alle = alle.filter(function (c) { if (seen[c.id]) return false; seen[c.id] = true; return true; });
+  DATA = { freunde: j.freunde || [], konzerte: alle, ich: j.ich || null, ab: ab, aeltere: j.aeltere || 0 };
 }
 function fehler(e) {
   if (e && e.status === 401) { store("k", null); KEY = null; render(); return; }
   if (e && e.code === "pin") { PIN = null; store("pin", null); view.screen = "wer"; render(); window.scrollTo(0, 0); toast(e.message + "."); return; }
   toast((e && e.message ? e.message : "Hat nicht geklappt") + ".\nBitte nochmal versuchen.");
+}
+
+// ---------------------------------------------------------------- Statistik (rechnet der Server – auch über ältere Konzerte, ohne alles zu laden)
+function statBox() {
+  var box = document.getElementById("statbox"); if (!box) return;
+  rohApi("statistik").then(function (j) {
+    var st = j.statistik || {}, jahr = new Date().getFullYear(), box2 = document.getElementById("statbox"); if (!box2) return;
+    var liste = function (a, feld) { return (a || []).map(function (x) { return x[feld] + " (" + x.n + ")"; }).join(", "); };
+    var orte = liste(st.orte, "ort"), mit = liste(st.mit, "kuerzel"), seit = st.erstes ? fmt(st.erstes) : null;
+    box2.innerHTML = '<div class="stats">' +
+      '<div class="stat"><b>' + (st.dies_jahr || 0) + "</b><span>Konzerte " + jahr + "</span></div>" +
+      '<div class="stat"><b>' + (st.waren || 0) + "</b><span>Konzerte insgesamt</span></div>" +
+      '<div class="stat"><b>' + (st.kommend || 0) + "</b><span>stehen noch an</span></div>" +
+      '<div class="stat"><b>' + (st.ausgaben ? eur(st.ausgaben).replace(",00", "") : "–") + "</b><span>für Karten" + (st.ausg_unsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
+      (orte ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(orte) + "</span>" : "") +
+      (mit ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(mit) + "</span>" : "") +
+      '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest' + (seit ? " – seit " + seit.mon + " " + seit.year : "") + ".</span>";
+  }, function () { var b2 = document.getElementById("statbox"); if (b2) b2.innerHTML = '<span class="hint">Gerade nicht erreichbar.</span>'; });
 }
 
 // ---------------------------------------------------------------- setlist.fm
@@ -284,7 +326,7 @@ function setlistAuto() {
   var f = ichFreund();
   if (!f || !f.setlistfm || !PIN) return;
   if (f.setlistfm_abgleich && Date.now() - new Date(f.setlistfm_abgleich).getTime() < 20 * 3600 * 1000) return;
-  api("setlist_abgleich", {}, true).then(function (j) {
+  api("setlist_abgleich", { schnell: true }, true).then(function (j) {
     if (j.info && (j.info.neu || j.info.eingetragen || j.info.entfernt)) { if (view.screen !== "form") render(); toast(setlistText(j.info)); }
   }, function () {});
 }
@@ -356,7 +398,7 @@ function render() {
     return;
   }
   document.body.classList.remove("breit");
-  if (view.screen === "meins") { app.innerHTML = viewMeins(); pushBox(); return; }
+  if (view.screen === "meins") { app.innerHTML = viewMeins(); pushBox(); statBox(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
   if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); }
   else if (view.screen === "form") app.innerHTML = viewForm(c);
@@ -462,13 +504,19 @@ function viewListe() {
   }
 
   h += '<div class="segs"><button type="button" class="seg' + (view.tab === "kommend" ? " on" : "") + '" data-act="tab" data-v="kommend">Kommende (' + up.length + ')</button>' +
-    '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + past.length + ')</button></div>' +
+    '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + (past.length + (ARCHIV_DA ? 0 : DATA.aeltere || 0)) + ')</button></div>' +
     '<div class="legrow"><div class="chips" aria-hidden="true"><span class="chip st-fix">Fix</span><span class="chip st-geplant">Geplant</span><span class="chip st-eventuell">Vielleicht</span></div>' +
     '<button class="addtop" type="button" data-act="neu">+ Eintragen</button></div>';
 
   var list = view.tab === "archiv" ? past : up;
   if (!list.length) h += '<p class="hint">Noch nichts hier.</p>';
-  list.forEach(function (c) { h += rowHtml(c, t); });
+  // Lange Archive nicht auf einmal zeichnen (kleines Handy, Mobilfunk)
+  var zeig = view.tab === "archiv" ? (view.archivN || 60) : list.length;
+  list.slice(0, zeig).forEach(function (c) { h += rowHtml(c, t); });
+  if (view.tab === "archiv") {
+    if (list.length > zeig) h += '<button class="secondary" type="button" data-act="archivmehr">Weitere ' + Math.min(60, list.length - zeig) + " zeigen (" + (list.length - zeig) + " übrig)</button>";
+    else if (!ARCHIV_DA && DATA.aeltere > 0) h += '<button class="secondary" type="button" data-act="archivladen">Ältere Konzerte laden (' + DATA.aeltere + ")</button>";
+  }
 
   h += '</div><div class="foot"><button type="button" data-act="einladen">Link an Freunde schicken</button>' +
     '<button type="button" data-act="neuladen">Aktualisieren</button><a href="datenschutz.html" style="padding:10px 0;font-weight:600">Datenschutz</a></div>' +
@@ -682,22 +730,6 @@ function viewMeins() {
   if (ab.liste.length) h += '<button class="back" type="button" data-act="alle" style="align-self:flex-start;padding:0">' + (view.alle ? "Erledigte ausblenden" : "Erledigte zeigen") + "</button>";
   h += "</section>";
 
-  var meine = DATA.konzerte.filter(function (c) { var m = mein(c); return m && (m.status === "fix" || m.status === "geplant"); });
-  var waren = meine.filter(function (c) { return c.datum < t; });
-  var diesJahr = waren.filter(function (c) { return c.datum.slice(0, 4) === String(jahr); }).length;
-  var kommend = meine.length - waren.length;
-  var ausg = 0, ausgUnsicher = false;
-  waren.forEach(function (c) {
-    var m = mein(c);
-    if (m.gekauft_von && m.betrag != null) ausg += m.betrag;
-    else { var pz = preisZahl(c.preis); if (pz != null) ausg += pz * Math.max(1, m.karten); else ausgUnsicher = true; }
-  });
-  var orte = {}, mit = {};
-  waren.forEach(function (c) {
-    if (c.ort) orte[c.ort] = (orte[c.ort] || 0) + 1;
-    c.leute.forEach(function (p) { if (p.kuerzel !== ME && (p.status === "fix" || p.status === "geplant")) mit[p.kuerzel] = (mit[p.kuerzel] || 0) + 1; });
-  });
-  var top = function (o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a] || a.localeCompare(b); }).slice(0, 3).map(function (k) { return k + " (" + o[k] + ")"; }).join(", "); };
   h += viewSetlist();
   h += '<section class="stack" style="gap:10px"><span class="over">Mitteilungen aufs Handy</span><div id="pushbox" class="stack" style="gap:10px"><span class="hint">…</span></div></section>';
   h += '<section class="stack" style="gap:10px"><span class="over">Mein Musikdienst zum Reinhören</span><div class="segs">';
@@ -705,21 +737,14 @@ function viewMeins() {
     h += '<button type="button" class="seg' + (dienst() === k ? " on" : "") + '" data-act="dienst" data-v="' + k + '" aria-pressed="' + (dienst() === k) + '">' + DIENSTE[k][0] + "</button>";
   });
   h += '</div><span class="hint">Gilt nur auf diesem Handy.</span></section>';
-  h += '<section class="stack" style="gap:10px"><span class="over">Statistik</span><div class="stats">' +
-    '<div class="stat"><b>' + diesJahr + "</b><span>Konzerte " + jahr + "</span></div>" +
-    '<div class="stat"><b>' + waren.length + "</b><span>Konzerte insgesamt</span></div>" +
-    '<div class="stat"><b>' + kommend + "</b><span>stehen noch an</span></div>" +
-    '<div class="stat"><b>' + (ausg ? eur(Math.round(ausg)).replace(",00", "") : "–") + "</b><span>für Karten" + (ausgUnsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
-    (top(orte) ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(top(orte)) + "</span>" : "") +
-    (top(mit) ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(top(mit)) + "</span>" : "") +
-    '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest. ' + ((ichFreund() || {}).setlistfm ? "Konzerte ab Januar 2026 kommen auch von setlist.fm." : "Die Liste beginnt im Oktober 2026 – Konzerte ab Januar holt der setlist.fm-Abgleich (Meins › setlist.fm).") + '</span></section></div>';
+  h += '<section class="stack" style="gap:10px"><span class="over">Statistik</span><div id="statbox" class="stack" style="gap:10px"><span class="hint">…</span></div></section></div>';
   return h;
 }
 
 function viewSetlist() {
   var f = ichFreund() || {}, h = '<section class="stack" style="gap:10px"><span class="over">setlist.fm</span>';
   if (!f.setlistfm) {
-    h += '<span class="hint">Holt deine Konzerte ab 2026, die du auf setlist.fm als besucht oder vorgemerkt hast – einmal am Tag automatisch. Andersrum geht es nicht: setlist.fm lässt von außen nichts eintragen. Dafür führt bei jedem Konzert ein Link direkt zur Setlist.</span>' +
+    h += '<span class="hint">Holt alle Konzerte, die du auf setlist.fm als besucht oder vorgemerkt hast. Danach schaut die Seite einmal am Tag nach neuen. Andersrum geht es nicht: setlist.fm lässt von außen nichts eintragen. Dafür führt bei jedem Konzert ein Link direkt zur Setlist.</span>' +
       '<div style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Dein Name auf setlist.fm</span><input id="slname" maxlength="40" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></label>' +
       '<button class="secondary" type="button" data-act="slverbinden">Verbinden</button></div>';
   } else {
@@ -942,9 +967,11 @@ var A = {
     var n = (document.getElementById("slname").value || "").trim();
     if (!n) { toast("Erst deinen setlist.fm-Namen eintippen."); return; }
     api("setlist_name", { name: n }).then(function () { return api("setlist_abgleich"); })
-      .then(function (j) { render(); toast(setlistText(j.info)); }, function (e) { render(); fehler(e); });
+      .then(function (j) { if (ARCHIV_DA) { ARCHIV = {}; ARCHIV_DA = false; } render(); toast(setlistText(j.info)); }, function (e) { render(); fehler(e); });
   },
-  slabgleich: function () { api("setlist_abgleich").then(function (j) { render(); toast(setlistText(j.info)); }, fehler); },
+  slabgleich: function () {
+    api("setlist_abgleich").then(function (j) { if (ARCHIV_DA) { ARCHIV = {}; ARCHIV_DA = false; } render(); toast(setlistText(j.info)); }, fehler);
+  },
   sltrennen: function () {
     if (!confirm("setlist.fm trennen? Die geholten Konzerte bleiben in der Liste.")) return;
     api("setlist_name", { name: null }).then(render, fehler);
@@ -993,7 +1020,9 @@ var A = {
     if (v && !/^\d+(\.\d{1,2})?$/.test(v)) { toast("Bitte als Zahl, z. B. 61,80."); return; }
     api("betrag", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME, betrag: v || null }).then(render, fehler);
   },
-  tab: function (d) { view.tab = d.v; render(); },
+  tab: function (d) { view.tab = d.v; view.archivN = 60; render(); },
+  archivmehr: function () { view.archivN = (view.archivN || 60) + 60; render(); },
+  archivladen: function () { api("archiv").then(function () { render(); }, fehler); },
   tippweg: function () { store("tipp-weg", "1"); render(); },
   open: function (d) { if (d.id) gehe("detail", d.id); else gehe("list"); },
   neu: function () { gehe("form", null); },
@@ -1046,6 +1075,7 @@ var A = {
   },
   loeschen: function () {
     if (!confirm("Konzert wirklich löschen? Das gilt für alle.")) return;
+    delete ARCHIV[view.id];
     api("konzert_loeschen", { id: view.id }).then(function () { view.id = null; gehe("list"); toast("Gelöscht."); }, fehler);
   }
 };
