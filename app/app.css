@@ -8,14 +8,14 @@
 @font-face { font-family: "Archivo XC"; font-weight: 800; src: url(fonts/ArchivoExtraCondensed-ExtraBold.ttf); font-display: swap; }
 
 :root {
-  --bg: #10292B; --surface: #1B3D40; --raised: #1F4A4D; --line: #3F7275;
+  --bg: #10292B; --surface: #1B3D40; --raised: #1F4A4D; --line: #4A7F82;
   --ink: #F4EBD6; --muted: #A9C2BE; --accent: #C8613A; --accent-text: #E8875F;
   --on-accent: #1A0F0A; --mustard: #E9B23F; --tab: #C8613A; --tab-edge: #8F4426;
   --r-sm: 6px; --r-md: 12px;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 Archivo, -apple-system, sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 Archivo, -apple-system, sans-serif; }
 button, input, select { font: inherit; color: inherit; }
 a { color: var(--accent-text); }
 :focus-visible { outline: 2px solid var(--mustard); outline-offset: 2px; }
@@ -74,7 +74,7 @@ header.top .logo { font-size: 30px; padding-bottom: 8px; }
 /* Tabelle */
 table { width: 100%; border-collapse: collapse; }
 thead th { position: sticky; top: 0; z-index: 1; background: var(--bg); text-align: left; font-family: "Archivo Condensed"; font-weight: 600;
-  font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 10px 10px; border-bottom: 1px solid var(--line);
+  font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 10px 10px; border-bottom: 1px solid var(--line);
   cursor: pointer; user-select: none; white-space: nowrap; }
 thead th.sorted { color: var(--mustard); }
 tbody tr { cursor: pointer; }
@@ -95,8 +95,8 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tile { cursor: pointer; }
 .tile .img { aspect-ratio: 1; border-radius: 4px; overflow: hidden; background: #0b0b0b; box-shadow: 0 6px 16px rgba(0,0,0,.35); }
 .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tile .t { margin-top: 6px; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .a { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .t { margin-top: 6px; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .a { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile.sel .img { outline: 3px solid var(--mustard); outline-offset: 2px; }
 
 /* Detail */
@@ -115,9 +115,9 @@ dt { color: var(--muted); } dd { margin: 0; }
 .tracks li { display: grid; grid-template-columns: 38px 1fr auto; gap: 6px; padding: 3px 0; border-bottom: 1px solid rgba(63,114,117,.25); }
 .tracks .pos { color: var(--mustard); font-variant-numeric: tabular-nums; }
 .tracks .dur { color: var(--muted); font-variant-numeric: tabular-nums; }
-.hint { margin-top: 20px; font-size: 12px; color: var(--muted); }
-.attr { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+.hint { margin-top: 20px; font-size: 13px; color: var(--muted); }
+.attr { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
 .attr a { color: var(--accent-text); }
-footer.legal { padding: 6px 22px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+footer.legal { padding: 6px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
 .empty { padding: 60px 22px; color: var(--muted); text-align: center; }
 .close { float: right; }

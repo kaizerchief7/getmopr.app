@@ -1,0 +1,7 @@
+Alle Schriften in diesem Ordner stammen von Google Fonts (github.com/google/fonts)
+und stehen unter der SIL Open Font License 1.1 (https://openfontlicense.org).
+Alfa Slab One, Shrikhand, Oswald, Archivo. Oswald und Archivo als statische
+Schnitte aus den variablen Originaldateien erzeugt.
+
+Archivo Condensed / Extra Condensed (ab 0.19): statische Schnitte aus github.com/Omnibus-Type/Archivo,
+ebenfalls SIL Open Font License 1.1.
