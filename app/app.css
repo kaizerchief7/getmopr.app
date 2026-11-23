@@ -48,7 +48,7 @@ input::placeholder { color: var(--muted); opacity: .8; }
 .error { color: var(--accent-text); margin-top: 12px; }
 
 /* Rahmen */
-.shell { display: grid; grid-template-rows: auto auto 1fr; height: 100vh; }
+.shell { display: grid; grid-template-rows: auto auto 1fr auto; height: 100vh; }
 header.top { display: flex; align-items: flex-end; gap: 28px; padding: 14px 22px 0; border-bottom: 3px solid var(--tab); }
 header.top .logo { font-size: 30px; padding-bottom: 8px; }
 .tabs { display: flex; gap: 4px; align-items: flex-end; flex: 1; }
@@ -116,5 +116,8 @@ dt { color: var(--muted); } dd { margin: 0; }
 .tracks .pos { color: var(--mustard); font-variant-numeric: tabular-nums; }
 .tracks .dur { color: var(--muted); font-variant-numeric: tabular-nums; }
 .hint { margin-top: 20px; font-size: 12px; color: var(--muted); }
+.attr { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+.attr a { color: var(--accent-text); }
+footer.legal { padding: 6px 22px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
 .empty { padding: 60px 22px; color: var(--muted); text-align: center; }
 .close { float: right; }

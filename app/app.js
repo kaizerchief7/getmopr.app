@@ -194,6 +194,8 @@
       '<div class="seg"><button data-view="table">Tabelle</button><button data-view="wall">Cover-Wand</button></div>' +
       '<span class="count" id="count"></span></div>' +
       '<div class="main nodetail" id="main"><div class="list" id="list"></div><aside class="detail" id="detail" hidden></aside></div>' +
+      // Pflichtsatz Discogs (#173), wörtlich wie in der App unter Einstellungen › Discogs
+      '<footer class="legal">This application uses Discogs\' API but is not affiliated with, sponsored or endorsed by Discogs. \'Discogs\' is a trademark of Zink Media, LLC.</footer>' +
       "</div>";
 
     $("#f-place").value = S.filter.place; $("#f-genre").value = S.filter.genre; $("#f-size").value = S.filter.size;
@@ -344,8 +346,9 @@
       line("Label", i.label) + line("Kat.-Nr.", i.catno) + line("Jahr", i.year) + line("Land", i.country) +
       line("Format", i.format) + line("Genre", (i.genres || []).join(", ")) + line("Stil", (i.styles || []).join(", ")) +
       line("Matrix", i.matrix) + "</dl>" +
-      '<p><a target="_blank" rel="noopener" href="https://www.discogs.com/release/' + encodeURIComponent(i.discogs_release_id) + '">Bei Discogs ansehen</a></p>' +
       '<h3>Tracks</h3><div id="tracks" class="muted">Lade …</div>' +
+      // Pflichthinweis Discogs (#173, wie App #168): direkt unter den Discogs-Daten, Link auf die Release-Seite
+      '<p class="attr">Data provided by <a target="_blank" rel="noopener" href="https://www.discogs.com/release/' + encodeURIComponent(i.discogs_release_id) + '">Discogs</a>.</p>' +
       '<p class="hint">Entwurf der Desktop-Version: nur ansehen. Bearbeiten, Umräumen und Massenbearbeitung kommen als Nächstes.</p>';
     $("#close").onclick = function () { select(null); };
 
