@@ -20,50 +20,51 @@
 @font-face{font-family:Archivo;font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
 @font-face{font-family:Shrikhand;font-weight:400;font-display:swap;src:url(fonts/shrikhand-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:ArchivoXC;font-weight:700;font-display:swap;src:url(fonts/archivo-xc-latin-700-normal.woff2) format("woff2")}
-:root{--bg:#F4EBD6;--surface:#FFFAF0;--raised:#EADFC6;--line:#D3C6A8;--ink:#2B1A12;--muted:#6A5848;--accent:#C8613A;--accent-text:#A93A12;--senf:#E9B23F;--petrol:#1F4A4D;--error:#B3261E}
+:root{--bg:#F4EBD6;--surface:#FFFAF0;--raised:#EADFC6;--line:#D3C6A8;--control-line:#9C8A6A;--ink:#2B1A12;--muted:#6A5848;--accent:#C8613A;--accent-text:#A93A12;--senf:#E9B23F;--petrol:#1F4A4D;--error:#B3261E}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Archivo,system-ui,-apple-system,sans-serif}
+html{-webkit-text-size-adjust:100%;font-size:100%}
+@supports (font:-apple-system-body){html{font:-apple-system-body}}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.4 Archivo,system-ui,-apple-system,sans-serif}
 button,input,select{font:inherit;color:inherit}
 a{color:var(--accent-text)}
 #app{max-width:560px;margin:0 auto;padding:0 18px calc(110px + env(safe-area-inset-bottom))}
 header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:calc(16px + env(safe-area-inset-top)) 0 12px}
-h1{margin:0;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:32px;line-height:38px;letter-spacing:.01em}
-h2{margin:0;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:30px;line-height:34px}
-.sub{font-size:13px;color:var(--muted)}
-h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line-height:40px;letter-spacing:0}
-.sub.brand{font-size:15px;font-weight:600;color:var(--muted);margin-top:-2px}
-.mopr{display:flex;align-items:center;justify-content:center;gap:8px;margin:34px 0 0;color:var(--muted);font-size:13px;text-decoration:none}
-.mopr b{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:16px;letter-spacing:.06em;color:var(--ink)}
+h1{margin:0;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:2rem;line-height:1.188;letter-spacing:.01em}
+h2{margin:0;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:1.875rem;line-height:1.133}
+.sub{font-size:0.875rem;color:var(--muted)}
+h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:2.125rem;line-height:1.176;letter-spacing:0}
+.sub.brand{font-size:0.9375rem;font-weight:600;color:var(--muted);margin-top:-2px}
+.mopr{display:flex;align-items:center;justify-content:center;gap:8px;margin:34px 0 0;color:var(--muted);font-size:0.8125rem;text-decoration:none}
+.mopr b{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1rem;letter-spacing:.06em;color:var(--ink)}
 .rec{display:inline-block;width:22px;height:22px;border-radius:50%;flex:none;background:radial-gradient(circle,var(--bg) 0 6%,var(--accent) 7% 22%,var(--senf) 23% 33%,#111 34% 100%)}
 .notiz{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .notiz .chip{flex:none}
-.notiz p{margin:0;flex:1;min-width:0;font-size:15px;line-height:21px;overflow-wrap:anywhere}
-.notiz small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-.pinin{width:100%;min-height:56px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:28px;letter-spacing:.5em;text-align:center}
-.over{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.notiz p{margin:0;flex:1;min-width:0;font-size:0.9375rem;line-height:1.4;overflow-wrap:anywhere}
+.notiz small{display:block;font-size:0.8125rem;color:var(--muted);margin-top:2px}
+.pinin{width:100%;min-height:56px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:1.75rem;letter-spacing:.5em;text-align:center}
+.over{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-weight:600;font-size:0.8125rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lbl{font-size:0.8125rem;font-weight:600;color:var(--muted)}
 .stack{display:flex;flex-direction:column;gap:12px}
-.chip{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 9px;border-radius:999px;font-size:13px;font-weight:600;line-height:1;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:0 9px;border-radius:999px;font-size:0.8125rem;font-weight:600;line-height:1;white-space:nowrap}
 .st-fix{background:var(--senf);border:1px solid var(--senf)}
 .st-geplant{background:var(--petrol);border:1px solid var(--petrol);color:#F4EBD6}
 .st-eventuell{border:1.5px dashed var(--muted);color:var(--muted)}
 .st-nein{border:1px solid var(--line);color:var(--muted);text-decoration:line-through}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:700}
+.badge{display:inline-flex;align-items:center;min-height:22px;padding:0 8px;border-radius:999px;font-size:0.8125rem;font-weight:700}
 .b-today{background:var(--accent)}
 .b-frei{background:var(--surface);border:1.5px solid var(--accent);color:var(--accent-text)}
 .b-tipp{border:1px solid var(--muted);color:var(--muted)}
 .b-sold{border:1px solid var(--error);color:var(--error)}
-.b-neu{background:var(--petrol);color:#F4EBD6;border-radius:4px;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;transform:rotate(-2deg)}
-.neuinfo{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border:2px solid var(--petrol);border-radius:12px;font-size:15px}
-.wahl{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer;font-size:15px}
+.b-neu{background:var(--petrol);color:#F4EBD6;border-radius:4px;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:0.8125rem;letter-spacing:.04em;text-transform:uppercase;transform:rotate(-2deg)}
+.neuinfo{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px;background:var(--surface);border:2px solid var(--petrol);border-radius:12px;font-size:0.9375rem}
+.wahl{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;text-align:left;background:var(--surface);border:1px solid var(--control-line);border-radius:12px;cursor:pointer;font-size:0.9375rem}
 .row.sel{border-color:var(--petrol);box-shadow:inset 5px 0 0 var(--petrol)}
 .legrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.suche{display:flex;gap:6px;align-items:center}.suche input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font:inherit;font-size:16px;color:var(--ink)}
-.jahr{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;padding:0 4px;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:18px;font-weight:600;color:var(--ink);cursor:pointer}
-.addtop{display:none;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--accent);color:var(--ink);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:16px;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
-.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:60px;height:60px;border:0;border-radius:50%;background:var(--accent);color:var(--ink);font-size:34px;line-height:1;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(43,26,18,.28);z-index:5}
+.suche{display:flex;gap:6px;align-items:center}.nurmeine{flex:none;min-height:44px;padding:0 12px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);color:var(--ink);font-size:0.9375rem;font-weight:600;cursor:pointer;white-space:nowrap}.nurmeine.on{background:var(--petrol);border-color:var(--petrol);color:#F4EBD6}.suche input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);font:inherit;font-size:1rem;color:var(--ink)}
+.jahr{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;padding:0 4px;border:0;border-bottom:1px solid var(--line);background:transparent;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.125rem;font-weight:600;color:var(--ink);cursor:pointer}
+.addtop{display:none;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:var(--accent);color:var(--ink);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1rem;font-weight:600;letter-spacing:.02em;cursor:pointer;white-space:nowrap}
+.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:60px;height:60px;border:0;border-radius:50%;background:var(--accent);color:var(--ink);font-size:2.125rem;line-height:1;font-weight:500;cursor:pointer;box-shadow:0 4px 14px rgba(43,26,18,.28);z-index:5}
 .leer{display:flex;align-items:center;justify-content:center;height:60vh;color:var(--muted);text-align:center}
 @media (min-width:1000px){
   body.breit #app{max-width:1180px;padding-bottom:0}
@@ -76,65 +77,65 @@ h1.brand{font-family:Shrikhand,Georgia,serif;font-weight:400;font-size:34px;line
   .addtop{display:inline-flex;align-items:center}
   .fab{display:none}
 }
-.seg{flex:1 1 0;min-height:44px;padding:4px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px;font-weight:600;cursor:pointer}
+.seg{flex:1 1 0;min-height:44px;padding:4px 6px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);font-size:0.9375rem;font-weight:600;cursor:pointer}
 .seg.on{background:var(--senf);border-color:var(--senf)}
 .segs{display:flex;gap:6px}
 .row{display:flex;gap:12px;width:100%;padding:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer}
 .neuinfo[data-act]{cursor:pointer}
 .date{flex:none;width:46px;display:flex;flex-direction:column;align-items:center}
-.date small{font-size:12px;font-weight:600;color:var(--muted)}
-.date b{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:26px;line-height:30px;font-weight:600}
+.date small{font-size:0.8125rem;font-weight:600;color:var(--muted)}
+.date b{font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.625rem;line-height:1.154;font-weight:600}
 .rmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.band{font-size:18px;line-height:22px;font-weight:700}
-.meta{font-size:14px;color:var(--muted)}
+.band{font-size:1.125rem;line-height:1.222;font-weight:700}
+.meta{font-size:0.9375rem;color:var(--muted)}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 18px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line)}
 .bar>div{max-width:524px;margin:0 auto}
-.primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;border:0;border-radius:14px;background:var(--accent);color:var(--ink);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:19px;font-weight:600;letter-spacing:.02em;cursor:pointer;text-decoration:none}
-.secondary{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:15px;font-weight:600;cursor:pointer}
-.take{flex:none;min-height:44px;padding:0 14px;border:0;border-radius:12px;background:var(--accent);font-size:15px;font-weight:700;cursor:pointer}
+.primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;border:0;border-radius:14px;background:var(--accent);color:var(--ink);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.1875rem;font-weight:600;letter-spacing:.02em;cursor:pointer;text-decoration:none}
+.secondary{min-height:44px;padding:0 14px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);font-size:0.9375rem;font-weight:600;cursor:pointer}
+.take{flex:none;min-height:44px;padding:0 14px;border:0;border-radius:12px;background:var(--accent);font-size:0.9375rem;font-weight:700;cursor:pointer}
 .free{display:flex;gap:10px;align-items:center;padding:12px;background:var(--surface);border:2px solid var(--accent);border-radius:12px}
-.card{display:flex;flex-direction:column;gap:4px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:15px}
+.card{display:flex;flex-direction:column;gap:4px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;font-size:0.9375rem}
 .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.lnk{display:flex;align-items:center;justify-content:center;min-height:48px;padding:4px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
+.lnk{display:flex;align-items:center;justify-content:center;min-height:48px;padding:4px 8px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);color:var(--ink);font-size:0.9375rem;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:calc(6px + env(safe-area-inset-top)) 0 6px;border-bottom:1px solid var(--line);margin:0 -18px 16px;padding-left:6px;padding-right:6px}
-.back{min-height:44px;padding:0 10px;border:0;background:transparent;color:var(--accent-text);font-size:16px;font-weight:600;cursor:pointer}
-.step{width:44px;height:44px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:20px;font-weight:700;cursor:pointer}
+.back{min-height:44px;padding:0 10px;border:0;background:transparent;color:var(--accent-text);font-size:1rem;font-weight:600;cursor:pointer}
+.step{width:44px;height:44px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:1.25rem;font-weight:700;cursor:pointer}
 .steprow{display:flex;align-items:center;gap:10px}
-.steprow span:first-child{flex:1;font-size:15px}
-.steprow b{min-width:24px;text-align:center;font-size:18px}
+.steprow span:first-child{flex:1;font-size:0.9375rem}
+.steprow b{min-width:24px;text-align:center;font-size:1.125rem}
 .person{display:flex;align-items:center;gap:10px;min-height:36px}
 .person .chip{min-width:44px}
 .fld{display:flex;flex-direction:column;gap:4px}
-.fld input{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px}
+.fld input{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--control-line);border-radius:12px;background:var(--surface);font-size:1rem}
 .fld input:focus,.seg:focus-visible,.row:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--petrol);outline-offset:2px}
-.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:16px}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:1rem}
 .check input{width:22px;height:22px;accent-color:var(--accent)}
 .whogrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.whogrid button{min-height:64px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:24px;font-weight:600;cursor:pointer}
+.whogrid button{min-height:64px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer}
 .whogrid button.on{background:var(--senf);border-color:var(--senf)}
 .toast{position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;display:flex;gap:10px;align-items:flex-start;padding:14px;background:var(--petrol);color:#F4EBD6;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:5}
 .toast[hidden]{display:none}
 #linkfeld[hidden]{display:none!important}
-.toast span{flex:1;font-size:15px;line-height:21px;white-space:pre-line}
+.toast span{flex:1;font-size:0.9375rem;line-height:1.4;white-space:pre-line}
 .toast button{flex:none;min-width:44px;min-height:44px;border:0;border-radius:10px;background:var(--senf);font-weight:700;cursor:pointer}
-.foot{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px;font-size:14px}
-.foot button{border:0;background:none;padding:10px 0;color:var(--accent-text);font-size:14px;font-weight:600;text-decoration:underline;cursor:pointer}
-.hint{font-size:14px;color:var(--muted)}
-.danger{border:0;background:none;color:var(--error);font-size:15px;font-weight:600;padding:12px 0;text-decoration:underline;cursor:pointer;align-self:flex-start}
+.foot{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px;font-size:0.9375rem}
+.foot button{border:0;background:none;padding:10px 0;color:var(--accent-text);font-size:0.9375rem;font-weight:600;text-decoration:underline;cursor:pointer}
+.hint{font-size:0.875rem;color:var(--muted)}
+.danger{border:0;background:none;color:var(--error);font-size:0.9375rem;font-weight:600;padding:12px 0;text-decoration:underline;cursor:pointer;align-self:flex-start}
 body.busy #app{opacity:.6;pointer-events:none}
-.money{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px}
+.money{display:flex;align-items:center;gap:10px;min-height:44px;font-size:0.9375rem}
 .money .what{flex:1;min-width:0}
-.tick{flex:none;min-width:92px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:14px;font-weight:700;cursor:pointer}
+.tick{flex:none;min-width:92px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:0.875rem;font-weight:700;cursor:pointer}
 .tick.on{background:var(--petrol);border-color:var(--petrol);color:#F4EBD6}
 .amt{border:0;background:none;padding:6px 0;font:inherit;font-weight:700;color:var(--accent-text);text-decoration:underline;cursor:pointer}
 .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .stat{padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
-.stat b{display:block;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:28px;line-height:32px}
-.stat span{font-size:13px;color:var(--muted)}
+.stat b{display:block;font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.75rem;line-height:1.143}
+.stat span{font-size:0.8125rem;color:var(--muted)}
 .pick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.pick button{min-height:52px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:20px;font-weight:600;cursor:pointer}
+.pick button{min-height:52px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-family:ArchivoXC,"Arial Narrow",sans-serif;font-size:1.25rem;font-weight:600;cursor:pointer}
 .pick button.on{background:var(--senf);border-color:var(--senf)}
-.msg{padding:48px 0;display:flex;flex-direction:column;gap:14px;font-size:16px}
+.msg{padding:48px 0;display:flex;flex-direction:column;gap:14px;font-size:1rem}
 </style>
 </head>
 <body>
@@ -193,7 +194,7 @@ function pushBox() {
       return '<button type="button" class="seg' + (w === o[0] ? " on" : "") + '" data-act="pushwahl" data-v="' + o[0] + '" aria-pressed="' + (w === o[0]) + '">' + o[1] + "</button>";
     }).join("") + "</div>";
     box.innerHTML = wahl
-      ? '<span style="font-size:15px"><b>✓ An</b> auf diesem Handy.</span>' + segs +
+      ? '<span style="font-size:0.9375rem"><b>✓ An</b> auf diesem Handy.</span>' + segs +
         '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" data-act="pushtest">Test schicken</button>' +
         '<button class="secondary" type="button" data-act="pushaus">Ausschalten</button></div>'
       : '<span class="hint">Bekomme eine Mitteilung, wenn jemand ein Konzert einträgt, absagt, eine Karte abgibt oder eine Notiz schreibt – mit roter Zahl am Symbol. Deine eigenen Einträge meldet es dir nicht.</span>' + segs +
@@ -272,10 +273,12 @@ function trifft(c, q) {
   var txt = norm([c.band, c.ort, c.notiz, c.datum.slice(0, 4), c.leute.filter(function (p) { return p.status !== "nein"; }).map(function (p) { return p.kuerzel; }).join(" ")].join(" "));
   return w.every(function (x) { return txt.indexOf(x) >= 0; });
 }
+// „Nur meine“: Konzerte, bei denen ich dabei bin (Fix, Geplant, Vielleicht – nicht „nein“)
+function sichtbar(c) { if (!view.nurMeine) return true; var m = mein(c); return !!(m && m.status && m.status !== "nein"); }
 function listeInhalt() {
   var t = heute(), h = "";
-  var up = DATA.konzerte.filter(function (c) { return c.datum >= t; });
-  var past = DATA.konzerte.filter(function (c) { return c.datum < t; }).reverse();
+  var up = DATA.konzerte.filter(function (c) { return c.datum >= t && sichtbar(c); });
+  var past = DATA.konzerte.filter(function (c) { return c.datum < t && sichtbar(c); }).reverse();
   if (view.q) {
     // Suche über alles (kommend + vergangen); ältere werden dafür einmal nachgeladen
     var tr = up.filter(function (c) { return trifft(c, view.q); }).concat(past.filter(function (c) { return trifft(c, view.q); }));
@@ -293,7 +296,7 @@ function listeInhalt() {
   // Waren wir: nach Jahren, zum Auf- und Zuklappen; dieses Jahr (bzw. das jüngste) offen
   var proJahr = {};
   past.forEach(function (c) { var y = c.datum.slice(0, 4); (proJahr[y] = proJahr[y] || []).push(c); });
-  var jahre = {}, srv = (!ARCHIV_DA && DATA.jahre) || {};
+  var jahre = {}, srv = (!ARCHIV_DA && !view.nurMeine && DATA.jahre) || {};
   Object.keys(proJahr).forEach(function (y) { jahre[y] = proJahr[y].length; });
   Object.keys(srv).forEach(function (y) { jahre[y] = (jahre[y] || 0) + srv[y]; });
   var liste = Object.keys(jahre).sort().reverse();
@@ -419,13 +422,23 @@ function statBox() {
       '<div class="stat"><b>' + (st.waren || 0) + "</b><span>Konzerte insgesamt</span></div>" +
       '<div class="stat"><b>' + (st.kommend || 0) + "</b><span>stehen noch an</span></div>" +
       '<div class="stat"><b>' + (st.ausgaben ? eur(st.ausgaben).replace(",00", "") : "–") + "</b><span>für Karten" + (st.ausg_unsicher ? " (Konzerte ohne Preis fehlen)" : "") + "</span></div></div>" +
-      (orte ? '<span style="font-size:15px"><b>Lieblingsorte:</b> ' + esc(orte) + "</span>" : "") +
-      (mit ? '<span style="font-size:15px"><b>Am öftesten mit:</b> ' + esc(mit) + "</span>" : "") +
+      (orte ? '<span style="font-size:0.9375rem"><b>Lieblingsorte:</b> ' + esc(orte) + "</span>" : "") +
+      (mit ? '<span style="font-size:0.9375rem"><b>Am öftesten mit:</b> ' + esc(mit) + "</span>" : "") +
       '<span class="hint">Gezählt wird, wo du auf Fix oder Geplant standest' + (seit ? " – seit " + seit.mon + " " + seit.year : "") + ".</span>";
   }, function () { var b2 = document.getElementById("statbox"); if (b2) b2.innerHTML = '<span class="hint">Gerade nicht erreichbar.</span>'; });
 }
 
 // ---------------------------------------------------------------- setlist.fm
+// Vergangenes Konzert ohne Setlist-Link: einmal im Hintergrund bei setlist.fm nach Band + genauem
+// Datum (+ Ort) suchen; gefunden → Link wird am Konzert gemerkt und führt direkt zur Setlist.
+var SL_GESUCHT = {};
+function setlistFinden(c) {
+  if (!c || c.setlist_url || c.datum >= heute() || SL_GESUCHT[c.id]) return;
+  SL_GESUCHT[c.id] = true;
+  api("setlist_suchen", { id: c.id }, true).then(function (j) {
+    if (j.info && j.info.url && view.screen === "detail" && view.id === c.id) render();
+  }, function () {});
+}
 function ichFreund() { return (DATA && DATA.freunde || []).filter(function (f) { return f.kuerzel === ME; })[0] || null; }
 function setlistText(i) {
   if (!i) return "";
@@ -508,13 +521,13 @@ function render() {
     document.body.classList.add("breit");
     app.innerHTML = '<div class="duo"><div class="duo-l">' + viewListe() + '</div><div class="duo-r">' + rechts + "</div></div>";
     var nl = document.querySelector(".duo-l"); if (nl) nl.scrollTop = top;
-    if (view.screen === "detail" && c) appleKuenstler();
+    if (view.screen === "detail" && c) { appleKuenstler(); setlistFinden(c); }
     return;
   }
   document.body.classList.remove("breit");
   if (view.screen === "meins") { app.innerHTML = viewMeins(); pushBox(); statBox(); return; }
   if (view.screen === "kauf" && c) { app.innerHTML = viewKauf(c); return; }
-  if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); }
+  if (view.screen === "detail" && c) { app.innerHTML = viewDetail(c); appleKuenstler(); setlistFinden(c); }
   else if (view.screen === "form") app.innerHTML = viewForm(c);
   else { view.screen = "list"; app.innerHTML = viewListe(); }
 }
@@ -579,13 +592,13 @@ function viewPin() {
 
 function viewListe() {
   var t = heute();
-  var up = DATA.konzerte.filter(function (c) { return c.datum >= t; });
-  var past = DATA.konzerte.filter(function (c) { return c.datum < t; }).reverse();
+  var up = DATA.konzerte.filter(function (c) { return c.datum >= t && sichtbar(c); });
+  var past = DATA.konzerte.filter(function (c) { return c.datum < t && sichtbar(c); }).reverse();
   var h = '<header class="top"><div><h1 class="brand">Konzerte</h1><div class="sub brand">in der großen Stadt</div></div>' +
     '<button class="secondary" type="button" data-act="meins" aria-label="Mein Bereich: Abrechnung und Statistik (' + esc(ME) + ')">' + esc(ME) + ' ▾</button></header><div class="stack">';
   var ab = abrechnungDaten();
   if (ab.bekomme > 0 || ab.schulde > 0) {
-    h += '<button type="button" class="row" data-act="meins" style="flex-direction:column;gap:2px"><span class="over">Abrechnung offen</span><span style="font-size:15px">' +
+    h += '<button type="button" class="row" data-act="meins" style="flex-direction:column;gap:2px"><span class="over">Abrechnung offen</span><span style="font-size:0.9375rem">' +
       (ab.bekomme > 0 ? "Du bekommst <b>" + eur(ab.bekomme) + "</b>" : "") + (ab.bekomme > 0 && ab.schulde > 0 ? " · " : "") +
       (ab.schulde > 0 ? "Du schuldest <b>" + eur(ab.schulde) + "</b>" : "") + "</span></button>";
   }
@@ -606,9 +619,9 @@ function viewListe() {
     free.forEach(function (x) {
       var mine = x.p.kuerzel === ME;
       h += '<div class="free"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">' +
-        '<button type="button" data-act="open" data-id="' + x.c.id + '" style="all:unset;cursor:pointer;font-size:16px;font-weight:700">' + esc(x.c.band) + '</button>' +
+        '<button type="button" data-act="open" data-id="' + x.c.id + '" style="all:unset;cursor:pointer;font-size:1rem;font-weight:700">' + esc(x.c.band) + '</button>' +
         '<span class="meta">' + esc(datumZeile(x.c, true)) + (x.c.ort ? " · " + esc(x.c.ort) : "") + '</span>' +
-        '<span style="font-size:14px;font-weight:600">' + (mine ? "Deine Karte – wartet auf Abnehmer" : plural(x.p.frei, "Karte", "Karten") + " von " + esc(x.p.kuerzel)) + '</span></div>' +
+        '<span style="font-size:0.875rem;font-weight:600">' + (mine ? "Deine Karte – wartet auf Abnehmer" : plural(x.p.frei, "Karte", "Karten") + " von " + esc(x.p.kuerzel)) + '</span></div>' +
         (mine ? "" : '<button class="take" type="button" data-act="take" data-id="' + x.c.id + '" data-von="' + esc(x.p.kuerzel) + '">Nehm ich</button>') + '</div>';
     });
   }
@@ -619,9 +632,10 @@ function viewListe() {
   }
 
   h += '<div class="segs"><button type="button" class="seg' + (view.tab === "kommend" ? " on" : "") + '" data-act="tab" data-v="kommend">Kommende (' + up.length + ')</button>' +
-    '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + (past.length + (ARCHIV_DA ? 0 : DATA.aeltere || 0)) + ')</button></div>' +
+    '<button type="button" class="seg' + (view.tab === "archiv" ? " on" : "") + '" data-act="tab" data-v="archiv">Waren wir (' + (past.length + (ARCHIV_DA || view.nurMeine ? 0 : DATA.aeltere || 0)) + ')</button></div>' +
     '<div class="suche"><input id="suche" type="search" enterkeyhint="search" autocomplete="off" placeholder="Suchen: Band, Ort, Kürzel, Jahr" value="' + esc(view.q || "") + '">' +
-    (view.q ? '<button type="button" class="back" data-act="suchweg" aria-label="Suche löschen">✕</button>' : "") + "</div>" +
+    (view.q ? '<button type="button" class="back" data-act="suchweg" aria-label="Suche löschen">✕</button>' : "") +
+    '<button type="button" class="nurmeine' + (view.nurMeine ? " on" : "") + '" data-act="nurmeine" aria-pressed="' + !!view.nurMeine + '">Nur meine</button></div>' +
     '<div class="legrow"><div class="chips" aria-hidden="true"><span class="chip st-fix">Fix</span><span class="chip st-geplant">Geplant</span><span class="chip st-eventuell">Vielleicht</span></div>' +
     '<button class="addtop" type="button" data-act="neu">+ Eintragen</button></div>';
 
@@ -665,10 +679,10 @@ function viewDetail(c) {
     '<button class="back" type="button" data-act="bearbeiten">Bearbeiten</button></div><div class="stack" style="gap:18px">';
 
   h += '<div class="stack" style="gap:6px"><span class="over">' + esc(datumZeile(c, false)) + "</span><h2>" + esc(c.band) + "</h2>" +
-    (c.ort || c.preis ? '<span style="font-size:16px">' + esc([c.ort, c.preis].filter(Boolean).join(" · ")) + "</span>" : "") +
+    (c.ort || c.preis ? '<span style="font-size:1rem">' + esc([c.ort, c.preis].filter(Boolean).join(" · ")) + "</span>" : "") +
     (c.ausverkauft ? '<span class="chips"><span class="badge b-sold">Ausverkauft</span></span>' : "");
-  if (c.vorverkauf) { var v = fmt(c.vorverkauf); h += '<span style="font-size:15px;font-weight:600">Vorverkauf ab ' + v.day + ". " + v.mon + " " + v.year + "</span>"; }
-  if (c.notiz) h += '<span style="font-size:15px;color:var(--muted)">' + esc(c.notiz) + "</span>";
+  if (c.vorverkauf) { var v = fmt(c.vorverkauf); h += '<span style="font-size:0.9375rem;font-weight:600">Vorverkauf ab ' + v.day + ". " + v.mon + " " + v.year + "</span>"; }
+  if (c.notiz) h += '<span style="font-size:0.9375rem;color:var(--muted)">' + esc(c.notiz) + "</span>";
   h += "</div>";
 
   var sum = past ? (act.length ? act.length + (act.length > 1 ? " waren dabei" : " war dabei") : "Niemand von uns war dabei")
@@ -679,7 +693,7 @@ function viewDetail(c) {
 
   if (!past) {
     c.leute.filter(function (p) { return p.frei > 0 && p.kuerzel !== ME; }).forEach(function (p) {
-      h += '<div class="free"><span style="flex:1;font-size:15px;font-weight:600">' + esc(p.kuerzel) + " hat " + plural(p.frei, "Karte", "Karten") + ' frei</span>' +
+      h += '<div class="free"><span style="flex:1;font-size:0.9375rem;font-weight:600">' + esc(p.kuerzel) + " hat " + plural(p.frei, "Karte", "Karten") + ' frei</span>' +
         '<button class="take" type="button" data-act="take" data-id="' + c.id + '" data-von="' + esc(p.kuerzel) + '">Nehm ich</button></div>';
     });
 
@@ -701,7 +715,7 @@ function viewDetail(c) {
       }
     }
     if (m && m.status === "nein") {
-      h += '<span style="font-size:15px;font-weight:600;color:var(--accent-text)">' + (m.frei > 0 ? (m.frei === 1 ? "Deine Karte steht" : "Deine " + m.frei + " Karten stehen") + " oben in der Liste als frei." : "Abgesagt.") + "</span>";
+      h += '<span style="font-size:0.9375rem;font-weight:600;color:var(--accent-text)">' + (m.frei > 0 ? (m.frei === 1 ? "Deine Karte steht" : "Deine " + m.frei + " Karten stehen") + " oben in der Liste als frei." : "Abgesagt.") + "</span>";
       if (m.karte === "hab") h += '<div class="steprow"><span>Freie Karten</span><button class="step" type="button" data-act="frei" data-v="-1" aria-label="Eine freie Karte weniger">−</button><b>' + m.frei + '</b><button class="step" type="button" data-act="frei" data-v="1" aria-label="Eine freie Karte mehr">+</button></div>';
     }
     h += '<button class="secondary" type="button" data-act="kauf">Ich habe Karten gekauft …</button>';
@@ -719,7 +733,7 @@ function viewDetail(c) {
   h += '<section class="stack" style="gap:8px"><span class="over">' + (past ? "Waren dabei" : "Wer geht mit") + "</span>";
   if (!leute.length) h += '<span class="hint">Noch niemand – bisher nur ein Tipp.</span>';
   leute.forEach(function (p) {
-    h += '<div class="person"><span class="chip st-' + p.status + '">' + esc(p.kuerzel) + '</span><span style="flex:1;font-size:15px">' +
+    h += '<div class="person"><span class="chip st-' + p.status + '">' + esc(p.kuerzel) + '</span><span style="flex:1;font-size:0.9375rem">' +
       (p.kuerzel === ME ? "ich · " : "") + esc(past ? "war dabei" : (p.status === "nein" ? info(p) : STL[p.status] + " · " + info(p))) + "</span></div>";
   });
   h += "</section>";
@@ -745,7 +759,7 @@ function viewDetail(c) {
   }
   L.push(["Anfahrt", "https://www.google.com/maps/search/?api=1&query=" + enc(q)]);
   // Direkt zur Setlist (dort auch „Ich war da“ bzw. vormerken) – sonst Suche nach Band und Datum
-  L.push(c.setlist_url ? ["Setlist (setlist.fm)", c.setlist_url] : ["Setlists", "https://www.setlist.fm/search?query=" + enc(c.band + " " + c.datum.slice(0, 4))]);
+  L.push(c.setlist_url ? ["Setlist (setlist.fm)", c.setlist_url] : ["Setlists suchen", "https://www.setlist.fm/search?query=" + enc(c.band + " " + c.datum.slice(0, 4))]);
   L.push(["Reinhören (" + DIENSTE[dienst()][0].replace(" Music", "") + ")", DIENSTE[dienst()][1](c.band)]);
   if (!past) L.push(["In Kalender", FN + "?ics=" + c.id + "&k=" + KEY]);
   h += '<section class="stack" style="gap:8px"><span class="over">Links</span><div class="links">';
@@ -868,7 +882,7 @@ function viewSetlist() {
       '<button class="secondary" type="button" data-act="slverbinden">Verbinden</button></div>';
   } else {
     var am = f.setlistfm_abgleich ? new Date(f.setlistfm_abgleich) : null;
-    h += '<span style="font-size:15px"><b>✓ Verbunden</b> als ' + esc(f.setlistfm) + (am ? ' <span class="meta">· zuletzt ' + am.getDate() + ". " + MON[am.getMonth()] + ", " + pad(am.getHours()) + ":" + pad(am.getMinutes()) + "</span>" : "") + "</span>" +
+    h += '<span style="font-size:0.9375rem"><b>✓ Verbunden</b> als ' + esc(f.setlistfm) + (am ? ' <span class="meta">· zuletzt ' + am.getDate() + ". " + MON[am.getMonth()] + ", " + pad(am.getHours()) + ":" + pad(am.getMinutes()) + "</span>" : "") + "</span>" +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" type="button" data-act="slabgleich">Jetzt abgleichen</button>' +
       '<button class="secondary" type="button" data-act="sltrennen">Trennen</button></div>' +
       '<span class="hint">Was du hier selbst änderst, bleibt so. Trennen lässt die geholten Konzerte stehen.</span>';
@@ -884,13 +898,13 @@ function viewKauf(c) {
   var sel = view.kauf.fuer, im = {};
   c.leute.forEach(function (p) { im[p.kuerzel] = p; });
   var h = '<div class="nav"><button class="back" type="button" data-act="open" data-id="' + c.id + '">‹ Abbrechen</button>' +
-    '<span style="font-family:ArchivoXC,sans-serif;font-size:18px;font-weight:600;padding-right:10px">Karten gekauft</span></div>' +
+    '<span style="font-family:ArchivoXC,sans-serif;font-size:1.125rem;font-weight:600;padding-right:10px">Karten gekauft</span></div>' +
     '<div class="stack" style="gap:16px"><div><span class="over">' + esc(datumZeile(c, false)) + "</span><h2>" + esc(c.band) + "</h2></div>" +
     '<span class="lbl">Für wen hast du Karten gekauft? (dich selbst mit antippen)</span><div class="pick">';
   DATA.freunde.forEach(function (f) {
     var p = im[f.kuerzel];
     h += '<button type="button" class="' + (sel[f.kuerzel] ? "on" : "") + '" data-act="kaufwer" data-k="' + esc(f.kuerzel) + '" aria-pressed="' + !!sel[f.kuerzel] + '">' + esc(f.kuerzel) +
-      (p && p.karten > 1 && p.status !== "nein" ? '<small style="display:block;font-size:12px;font-family:Archivo,sans-serif">×' + p.karten + "</small>" : "") + "</button>";
+      (p && p.karten > 1 && p.status !== "nein" ? '<small style="display:block;font-size:0.75rem;font-family:Archivo,sans-serif">×' + p.karten + "</small>" : "") + "</button>";
   });
   var pz = preisZahl(c.preis);
   h += '</div><label class="fld"><span class="lbl">Preis pro Karte in €</span><input id="kaufpreis" inputmode="decimal" placeholder="z. B. 34,50" value="' + (pz != null ? pz.toFixed(2).replace(".", ",") : "") + '"></label>' +
@@ -906,7 +920,7 @@ function viewForm(c) {
   DATA.konzerte.forEach(function (x) { if (x.ort && orte.indexOf(x.ort) < 0) orte.push(x.ort); });
   orte.sort(function (a, b) { return a.localeCompare(b, "de"); });
   var h = '<div class="nav"><button class="back" type="button" data-act="abbrechen" data-id="' + (c ? c.id : "") + '">‹ Abbrechen</button>' +
-    '<span style="font-family:ArchivoXC,sans-serif;font-size:18px;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
+    '<span style="font-family:ArchivoXC,sans-serif;font-size:1.125rem;font-weight:600;padding-right:10px">' + (neu ? "Neues Konzert" : "Konzert bearbeiten") + '</span></div><form id="f" class="stack" style="gap:14px" onsubmit="return false">' +
     '<div class="stack" style="gap:6px"><div class="links">' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="einfuegen">Link einfügen</button>' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="bildwahl">Foto / Screenshot</button>' +
@@ -1151,7 +1165,7 @@ var A = {
     if (v && !/^\d+(\.\d{1,2})?$/.test(v)) { toast("Bitte als Zahl, z. B. 61,80."); return; }
     api("betrag", { konzert_id: d.id, kuerzel: d.k, kaeufer: ME, betrag: v || null }).then(render, fehler);
   },
-  tab: function (d) { view.tab = d.v; render(); },
+  tab: function (d) { view.tab = d.v; render(); if (d.v === "archiv" && view.nurMeine && !ARCHIV_DA && DATA.aeltere > 0) api("archiv", {}, true).then(render, function () {}); },
   jahr: function (d) {
     view.offen = view.offen || {};
     view.offen[d.y] = !view.offen[d.y];
@@ -1160,6 +1174,11 @@ var A = {
     render();
   },
   suchweg: function () { view.q = ""; render(); },
+  nurmeine: function () {
+    view.nurMeine = !view.nurMeine; store("nurmeine", view.nurMeine ? "1" : null); render();
+    // Vergangene eigene Konzerte liegen teils nur im Archiv → einmal nachladen
+    if (view.nurMeine && view.tab === "archiv" && !ARCHIV_DA && DATA.aeltere > 0) api("archiv", {}, true).then(render, function () {});
+  },
   tippweg: function () { store("tipp-weg", "1"); render(); },
   open: function (d) { if (d.id) gehe("detail", d.id); else gehe("list"); },
   neu: function () { gehe("form", null); },
@@ -1236,7 +1255,7 @@ document.addEventListener("paste", function (e) {
 });
 
 function start() {
-  KEY = leseSchluessel(); ME = load("me"); PIN = load("pin");
+  KEY = leseSchluessel(); ME = load("me"); PIN = load("pin"); view.nurMeine = load("nurmeine") === "1";
   render();
   if (!KEY || FN.indexOf("PROJEKT") >= 0) return;
   api("laden").then(function () {
