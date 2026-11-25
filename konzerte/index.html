@@ -229,7 +229,7 @@ function linkVorschlag(j) {
   if (w && !f.band.value.trim()) f.band.value = w;
   if (ort && !f.ort.value.trim()) f.ort.value = ort;
   document.getElementById("linkwahl").innerHTML = "";
-  toast((j.quelle || "Die Seite") + " lässt keine Vorschau zu. Link ist übernommen" + (w ? ", Band aus der Adresse – bitte prüfen" : "") + ". Datum bitte selbst eintragen.");
+  toast((j.quelle || "Die Seite") + " lässt keine Vorschau zu. Link ist übernommen" + (w ? ", Band aus der Adresse – bitte prüfen" : "") + ".\nTipp: Screenshot der Seite über „Foto / Screenshot“ wählen – dann füllt sich der Rest.");
 }
 
 // Ergebnis von Link- oder Bild-Erkennung ins Formular bringen (ein Termin: direkt; mehrere: Auswahl)
@@ -926,7 +926,7 @@ function viewForm(c) {
     '<button type="button" class="lnk" style="min-height:44px" data-act="bildwahl">Foto / Screenshot</button>' +
     '<button type="button" class="lnk" style="min-height:44px" data-act="formsuche">Im Netz suchen ↗</button></div>' +
     '<input id="bildquelle" type="file" accept="image/*" hidden>' +
-    '<span class="hint">Link einfügen (z. B. aus Rausgegangen) oder einen Screenshot bzw. ein Foto vom Plakat wählen – alles füllt sich. Oder unten selbst eintragen.</span>' +
+    '<span class="hint">Link einfügen (z. B. aus Rausgegangen, danach kurz auf „Einsetzen“ tippen) oder einen Screenshot bzw. ein Foto vom Plakat wählen – alles füllt sich. Bei Eventim klappt der Screenshot am besten. Oder unten selbst eintragen.</span>' +
     '<div id="linkfeld" hidden style="display:flex;gap:8px;align-items:flex-end"><label class="fld" style="flex:1"><span class="lbl">Link hier einsetzen</span>' +
     '<input id="linkquelle" type="url" inputmode="url" autocomplete="off" placeholder="https://…"></label>' +
     '<button class="secondary" type="button" data-act="linklesen">Übernehmen</button></div><div id="linkwahl" class="stack" style="gap:6px"></div></div>' +
