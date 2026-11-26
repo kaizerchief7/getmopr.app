@@ -9,13 +9,17 @@
 
   // Maße im 800er-Raster des Originalbilds, Zuschnitt x 40–768, y 175–562 (README im Repo mopr: docs/design/bilder/ebenen)
   var W = 728, H = 387, X0 = 40, Y0 = 175;
+  // Innenraum je Kiste, gemessen im Bild: vorn (Oberkante Frontblende) und hinten (Rückwand).
+  // Wegen der Perspektive ist der Innenraum vorn breiter und liegt bei jeder Kiste anders –
+  // darum rechnet jede Kiste ihre Platten aus ihren eigenen Maßen (Georges 26.11.: „rechts wandern die Platten ins Holz“).
   var CRATES = [
-    { cx: 238, hole: [168, 479, 298, 502], label: [306, 516] },
-    { cx: 566, hole: [510, 479, 640, 502], label: [648, 516] }
+    { front: [63, 392], back: [121, 392], hole: [168, 479, 298, 502], label: [306, 516] },
+    { front: [411, 747], back: [411, 684], hole: [510, 479, 640, 502], label: [648, 516] }
   ];
-  var COVER = 262, FRONT_TOP = 449, VISIBLE = 0.75;   // ¾ des Covers über der Frontblende
-  var BEHIND = 3, STEP_UP = 13, STEP_IN = 4;          // 3 Platten dahinter, je etwas höher und schmaler
-  var TILT = 8;                                       // Neigung wie im Kistentest v4
+  var FRONT_TOP = 449, BACK_FLOOR = 445;   // Oberkante Frontblende, Boden an der Rückwand
+  var FILL = 0.97, VISIBLE = 0.72;         // LP füllt die Kiste fast ganz (31,4 cm in ~33 cm), ~¾ ragen heraus
+  var BEHIND = 3, F0 = 0.04, F_STEP = 0.035;  // vordere Platte knapp hinter der Front, jede weitere ein Stück tiefer
+  var TILT = 0;                            // keine künstliche Neigung (Georges: „schief“)
 
   var K = { pair: 0, side: 0, pos: {}, wheel: 0, crates: [], api: null, box: null };
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -72,13 +76,24 @@
   function crateAt(side) { return K.crates[K.pair + side]; }
   function posOf(c) { var p = K.pos[c.key] || 0; return Math.max(0, Math.min(p, c.items.length - 1)); }
 
-  function coverHtml(api, i, depth) {
-    var w = COVER - depth * STEP_IN, top = FRONT_TOP - COVER * VISIBLE - depth * STEP_UP;
+  // Lage einer Platte in Tiefe f (0 = vorn, 1 = Rückwand): Breite, Mitte und Boden wandern perspektivisch nach hinten
+  function geo(g, depth) {
+    var f = F0 + depth * F_STEP;
+    var fw = (g.front[1] - g.front[0]) * FILL, bw = (g.back[1] - g.back[0]) * FILL;
+    var w = fw + (bw - fw) * f;
+    var cx = (g.front[0] + g.front[1]) / 2 + ((g.back[0] + g.back[1]) / 2 - (g.front[0] + g.front[1]) / 2) * f;
+    var floor0 = FRONT_TOP + fw * (1 - VISIBLE);           // Boden vorn: so, dass ~¾ der LP über die Front ragen
+    var floor = floor0 + (BACK_FLOOR - floor0) * f;
+    return { w: w, cx: cx, top: floor - w };
+  }
+
+  function coverHtml(api, i, depth, g) {
+    var q = geo(g, depth), w = q.w, top = q.top;
     var dim = depth ? " d" + depth : "";
     var face = i.cover_url
       ? '<img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="' + api.esc(i.cover_url) + '">'
       : '<span class="kraft"><b>' + api.esc(api.cleanArtist(i.artist)) + "</b>" + api.esc(i.title || "") + "</span>";
-    return { w: w, top: top, html: face, cls: "kcover" + dim };
+    return { w: w, top: top, cx: q.cx, html: face, cls: "kcover" + dim };
   }
 
   function render(box, list, api) {
@@ -183,7 +198,7 @@
       reg.hidden = false;
       var p = posOf(c), html = "";
       for (var d = Math.min(BEHIND, c.items.length - 1 - p); d >= 0; d--) {
-        var i = c.items[p + d], cv = coverHtml(api, i, d);
+        var i = c.items[p + d], cv = coverHtml(api, i, d, g);
         var prev = c.items[p + d - 1];
         var tab = "";
         var L = letterOf(api, i);
@@ -191,7 +206,7 @@
           var off = (L === "#" ? 0 : (L.charCodeAt(0) - 65) / 25) * (cv.w - cv.w * 0.26);
           tab = '<button class="ktab" tabindex="-1" data-idx="' + (p + d) + '" style="left:' + (off / cv.w * 100).toFixed(2) + '%" aria-label="Trennkarte ' + L + '">' + L + "</button>";
         }
-        html += '<div class="' + cv.cls + (d === 0 ? " front" + (backAnim ? " kommt" : "") : "") + '" style="left:' + pctX(g.cx - cv.w / 2) +
+        html += '<div class="' + cv.cls + (d === 0 ? " front" + (backAnim ? " kommt" : "") : "") + '" style="left:' + pctX(cv.cx - cv.w / 2) +
           ";top:" + pctY(cv.top) + ";width:" + pctW(cv.w) + ";height:" + pctH(cv.w) + ";transform:perspective(900px) rotateX(" + TILT + "deg)" +
           '"' + (d === 0 ? ' role="button" tabindex="-1" aria-label="' + api.esc(api.cleanArtist(i.artist) + " – " + i.title + ", öffnen") + '"' : ' aria-hidden="true"') + ">" +
           tab + cv.html + "</div>";
