@@ -18,7 +18,7 @@
   var collator = new Intl.Collator("de", { numeric: true, sensitivity: "base" });
 
   var S = {
-    user: null, items: [], locations: {}, tags: {}, releases: {},
+    user: null, items: [], locations: {}, tags: {}, releases: {}, inbox: "Neuzugänge",
     view: load("view") || "table", q: "", sort: { key: "artist", dir: 1 },
     filter: { place: "", genre: "", style: "", size: "", tag: "" }, selected: null,
     login: { step: "mail", email: "", busy: false, error: "" }
@@ -64,13 +64,13 @@
     return parts.join(" › ");
   }
   function placeGroup(item) {
-    if (!item.location_id) return "Ohne Ort";
+    if (!item.location_id) return S.inbox;
     var loc = S.locations[item.location_id], top = loc, seen = 0;
     while (top && top.parent_id && S.locations[top.parent_id] && seen++ < 10) top = S.locations[top.parent_id];
-    if (!top) return "Ohne Ort";
+    if (!top) return S.inbox;
     if (top.kind === "loan") return "Verliehen";
     if (top.kind === "room") return top.name;
-    return "Kisten & Koffer";
+    return "Taschen & Koffer";
   }
 
   // ---------- Anmeldung ----------
@@ -150,7 +150,10 @@
       if (r.data.length < page) break;
       from += page;
     }
-    var locs = await sb.from("locations").select("id, parent_id, name, kind, sort_order");
+    var locs = await sb.from("locations").select("id, parent_id, name, kind, sort_order, grid_row, grid_col");
+    // Name der Neuzugänge (#207) – je Nutzer, Standard „Neuzugänge“
+    var ein = await sb.from("nutzer_einstellungen").select("eingang_name").maybeSingle();
+    S.inbox = (ein.data && ein.data.eingang_name) || "Neuzugänge";
     var tags = await sb.from("tags").select("id, name, sort_order").order("sort_order");
     S.locations = {}; (locs.data || []).forEach(function (l) { S.locations[l.id] = l; });
     S.tags = {}; (tags.data || []).forEach(function (t) { S.tags[t.id] = t; });
@@ -191,7 +194,7 @@
       '<select id="f-style" aria-label="Stil"></select>' +
       '<select id="f-size" aria-label="Format">' + opts(sizes, "Alle Formate") + "</select>" +
       (Object.keys(S.tags).length ? '<select id="f-tag" aria-label="Tag">' + tagOpts + "</select>" : "") +
-      '<div class="seg"><button data-view="table">Tabelle</button><button data-view="wall">Cover-Wand</button></div>' +
+      '<div class="seg"><button data-view="table">Tabelle</button><button data-view="wall">Cover-Wand</button><button data-view="kiste">Kiste</button></div>' +
       '<span class="count" id="count"></span></div>' +
       '<div class="main nodetail" id="main"><div class="list" id="list"></div><aside class="detail" id="detail" hidden></aside></div>' +
       // Pflichtsatz Discogs (#173), wörtlich wie in der App unter Einstellungen › Discogs
@@ -219,7 +222,8 @@
       b.onclick = function () { S.view = b.dataset.view; store("view", S.view); renderList(); };
     });
     document.onkeydown = function (e) {
-      if (e.key === "Escape" && S.selected) { select(null); }
+      if (e.key === "Escape" && S.selected) { select(null); return; }
+      if (S.view === "kiste" && window.MOPRKiste && MOPRKiste.key(e)) { e.preventDefault(); return; }
       if ((e.key === "ArrowDown" || e.key === "ArrowUp") && S.selected && document.activeElement.tagName !== "INPUT") {
         var list = visible(), i = list.findIndex(function (x) { return x.id === S.selected; });
         var n = list[i + (e.key === "ArrowDown" ? 1 : -1)];
@@ -272,7 +276,13 @@
     app.querySelectorAll(".seg button").forEach(function (b) { b.classList.toggle("on", b.dataset.view === S.view); });
     if (!list.length) { box.innerHTML = '<div class="empty">Keine Platte passt zu Suche und Filter.</div>'; return; }
 
-    if (S.view === "wall") {
+    if (S.view === "kiste" && window.MOPRKiste) {
+      MOPRKiste.render(box, list, {
+        esc: esc, sortName: sortName, cleanArtist: cleanArtist, path: path, collator: collator,
+        locations: S.locations, inboxName: function () { return S.inbox; }, select: select
+      });
+      return;
+    } else if (S.view === "wall") {
       box.innerHTML = '<div class="wall">' + list.map(function (i) {
         return '<div class="tile' + (i.id === S.selected ? " sel" : "") + '" data-id="' + esc(i.id) + '"><div class="img">' +
           (i.cover_url ? '<img loading="lazy" alt="" src="' + esc(i.cover_url) + '">' : "") + "</div>" +
@@ -305,7 +315,7 @@
       '<td class="num">' + esc(i.year || "") + "</td>" +
       '<td><span class="pill">' + esc(size(i)) + "</span></td>" +
       '<td class="muted">' + esc(g) + (s && s !== g ? " · " + esc(s) : "") + "</td>" +
-      "<td>" + (i.location_id ? esc(path(i.location_id)) + (i.position ? " · " + esc(i.position) : "") : '<span class="muted">ohne Ort</span>') + "</td>" +
+      "<td>" + (i.location_id ? esc(path(i.location_id)) + (i.position ? " · " + esc(i.position) : "") : '<span class="muted">' + esc(S.inbox) + "</span>") + "</td>" +
       '<td class="muted">' + esc(i.condition_media || "") + "</td>" +
       '<td class="num">' + esc(euro(i.purchase_price)) + "</td>" +
       '<td class="muted num">' + esc(date(i.created_at)) + "</td></tr>";
@@ -333,7 +343,7 @@
       (i.cover_url ? '<img class="big" alt="" src="' + esc(i.cover_url) + '">' : '<div class="big"></div>') +
       "<h2>" + esc(i.title) + '</h2><div class="by">' + esc(cleanArtist(i.artist)) + "</div>" +
       '<div class="chips">' +
-      '<span class="chip key">' + esc(i.location_id ? path(i.location_id) : "ohne Ort") + "</span>" +
+      '<span class="chip key">' + esc(i.location_id ? path(i.location_id) : S.inbox) + "</span>" +
       (i.condition_media ? '<span class="chip">' + esc(i.condition_media) + "</span>" : "") +
       '<span class="chip">' + esc(size(i)) + "</span>" +
       (i.favorite ? '<span class="chip">★ Liebling</span>' : "") +

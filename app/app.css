@@ -121,3 +121,60 @@ dt { color: var(--muted); } dd { margin: 0; }
 footer.legal { padding: 6px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
 .empty { padding: 60px 22px; color: var(--muted); text-align: center; }
 .close { float: right; }
+
+/* ---------- Plattenkiste (Doppelfach, Designsprache 2.1, 26.11.2026) ---------- */
+@font-face { font-family: "Courier Prime"; font-weight: 400; src: url(fonts/CourierPrime-Regular.ttf); font-display: swap; }
+@font-face { font-family: "Courier Prime"; font-weight: 700; src: url(fonts/CourierPrime-Bold.ttf); font-display: swap; }
+:root { --kraft100: #F7EEDC; --kraft200: #E6D3AE; --kraft300: #D9BC8A; --kraft-ink: #2A1D10; --paper: #F5F0E4; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.kiste-wrap { padding: 14px 22px 30px; display: flex; flex-direction: column; align-items: center; }
+.kiste-kopf { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 1100px; margin-bottom: 6px; }
+.kiste-kopf select { width: auto; max-width: 420px; font-family: "Courier Prime"; font-weight: 700; }
+.kiste-kopf .btn { min-width: 44px; min-height: 40px; font-size: 20px; padding: 4px 12px; }
+.kiste-hilfe { margin-left: auto; color: var(--muted); font-size: 13px; }
+/* Bühne: feste Proportion des Bildes (728 × 502), passt in die Fensterhöhe */
+.kiste-buehne { position: relative; width: min(100%, 1100px, calc((100vh - 300px) * 728 / 387)); aspect-ratio: 728 / 387;
+  user-select: none; overscroll-behavior: contain;
+  background: radial-gradient(ellipse 60% 55% at 50% 62%, rgba(233,178,63,.16), rgba(233,178,63,0) 70%); }
+.kiste-buehne > img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.k-hinten { z-index: 1; filter: drop-shadow(0 18px 22px rgba(0,0,0,.45)); }
+.k-fach { position: absolute; inset: 0; z-index: 2; }
+.k-vorne { z-index: 3; }
+.k-fach.aus .kcover { filter: brightness(.55) saturate(.8); }
+.kcover { position: absolute; transform-origin: 50% 100%; border-radius: 2px; background: #0b0b0b; cursor: pointer;
+  box-shadow: 0 -2px 0 var(--paper), 0 -4px 0 rgba(245,240,228,.55), 0 10px 18px rgba(0,0,0,.45); }
+.kcover img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 2px; }
+.kcover.d1 { filter: brightness(.72); } .kcover.d2 { filter: brightness(.56); } .kcover.d3 { filter: brightness(.42); }
+.k-fach.aus .kcover.d1, .k-fach.aus .kcover.d2, .k-fach.aus .kcover.d3 { filter: brightness(.35); }
+.kcover .kraft { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 10%;
+  background: var(--kraft200); color: var(--kraft-ink); font: 700 clamp(11px, 1.3vw, 18px)/1.2 "Courier Prime", monospace; text-transform: uppercase; }
+.kcover .kraft b { font-size: 1.15em; }
+.kcover.kippt { z-index: 5; pointer-events: none; animation: kippen .2s ease-in forwards; }
+.kcover.kommt { animation: kommen .2s ease-out; }
+@keyframes kippen { to { transform: perspective(900px) rotateX(-72deg) translateY(4%); opacity: 0; } }
+@keyframes kommen { from { transform: perspective(900px) rotateX(-72deg) translateY(4%); opacity: 0; } }
+.kiste-buehne.anschlag .k-fach:not(.aus) .kcover.front { animation: federn .22s ease-out; }
+@keyframes federn { 40% { transform: perspective(900px) rotateX(3deg); } }
+/* Trennkarte: Kraftkarton-Reiter ragt über die Platte, bleibt innerhalb der Coverbreite */
+.ktab { position: absolute; top: -9%; width: 26%; height: 9%; z-index: 1; border: 0; border-radius: 5px 5px 0 0; padding: 0;
+  background: linear-gradient(var(--kraft100), var(--kraft200)); color: var(--kraft-ink); cursor: pointer;
+  font: 700 clamp(11px, 1.2vw, 16px)/1 "Courier Prime", monospace; letter-spacing: .06em;
+  box-shadow: 0 -1px 0 rgba(255,255,255,.5) inset, 0 -2px 4px rgba(0,0,0,.25); }
+.k-fach.aus .ktab { filter: brightness(.6); }
+/* Etikett auf der Front + Regler im Griffloch */
+.k-etikett { position: absolute; z-index: 4; transform: translateY(-50%); background: var(--kraft200); color: var(--kraft-ink);
+  font: 700 clamp(10px, 1.15vw, 15px)/1 "Courier Prime", monospace; letter-spacing: .06em; padding: 5px 8px; border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.35); white-space: nowrap; pointer-events: none; }
+.k-regler { position: absolute; z-index: 4; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.k-regler::-webkit-slider-runnable-track { background: transparent; height: 100%; }
+.k-regler::-moz-range-track { background: transparent; }
+.k-regler::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 100%; min-height: 14px; border-radius: 4px;
+  background: var(--kraft200); box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.k-regler::-moz-range-thumb { width: 22px; height: 100%; border: 0; border-radius: 4px; background: var(--kraft200); }
+.k-regler:focus-visible { outline: 2px solid var(--mustard); }
+/* Titel unter der Kiste: aktive Kiste im Licht, die andere gedimmt */
+.kiste-info { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 1100px, calc((100vh - 300px) * 728 / 387)); margin-top: 10px; text-align: center; }
+.kiste-info .aus { opacity: .45; }
+.kiste-info .k-t { font-family: "Archivo XC"; font-weight: 800; font-size: 24px; line-height: 1.1; }
+.kiste-info .k-a { font-family: "Archivo Condensed"; font-weight: 600; color: var(--muted); font-size: 16px; }
+@media (prefers-reduced-motion: reduce) { .kcover.kippt, .kcover.kommt, .kiste-buehne.anschlag .kcover { animation: none; } }
